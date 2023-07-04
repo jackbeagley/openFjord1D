@@ -3,7 +3,6 @@ use gsw_mod_toolbox
 use matrix_debug
 
 implicit none
-
   ! Public interface of the library
   public :: compute
 
@@ -13,28 +12,32 @@ implicit none
   ! Set latitude to Doubtful Sound
   double precision, parameter :: lat = -45.5
 
+  ! Diffusivity constants
+  ! double precision, parameter :: a0_diff = 2.d-3
+  double precision, parameter :: a0_diff = 2.d-5
+  double precision, parameter :: q_diff = 1.6d0
+
 contains
-  subroutine compute(z, a, sa, tis, t, sa_bc, tis_bc, n_z, n_t)
+  subroutine compute(z, a, sa, tis, rho, t, sa_bc, tis_bc, kappa_f_coefs, n_z, n_t)
     implicit none
     integer, intent(in) :: n_z, n_t
     double precision, dimension(n_z), intent(inout) :: z, a
-    double precision, dimension(n_z, n_t), intent(inout) :: sa, tis
+    double precision, dimension(n_z, n_t), intent(inout) :: sa, tis, rho
     double precision, dimension(n_t), intent(in) :: t, sa_bc, tis_bc
     integer :: i, j, k
 
-    double precision, dimension(n_z) :: rho, p, ct, n_freq, n_freq2, kappa, dadz, dkappadz
+    double precision, dimension(n_z) :: p, ct, n_freq, n_freq2, kappa, dadz, dkappadz
 
     double precision :: dz, dt
 
     double precision, dimension(n_z, n_z) :: A_mat
-    double precision, dimension(n_z) :: b_vec, x_vec
+    double precision, dimension(n_z, 2) :: bx_vec
 
-    double precision, dimension(2) :: A_coefs_z
-
+    double precision, dimension(2) :: kappa_f_coefs
+    
     ! Output variables for DGESV
     integer, dimension(n_z) :: ipiv
     integer :: info
-
 
     dz = (z(n_z) - z(1))/(n_z - 1)
     dt = (t(n_t) - t(1))/(n_t - 1)
@@ -55,10 +58,8 @@ contains
       do j = 1, n_z
         ! Pressure from depth
         p(j) = gsw_p_from_z(z(j), lat)
-        ! Conservative temperature from in-situ temperature
-        ct(j) = gsw_ct_from_t(sa(j, i), tis(j, i), p(j))
         ! Density from absolute salinity, conservative temperature and pressure
-        rho(j) = gsw_rho(sa(j, i), ct(j), p(j))
+        rho(j, i) = gsw_rho_t_exact(sa(j, i), tis(j, i), p(j))
       end do
 
       ! Calculate the Brunt-Vaisala (buoyancy) frequency
@@ -66,12 +67,9 @@ contains
   
       ! Calculate the diffusivity
       do j = 1, n_z
-        kappa(j) = calc_diffusivity(n_freq(j), 2.d-3, 1.6d0)
+        kappa(j) = calc_diffusivity(n_freq(j), kappa_f_coefs)
         ! kappa(j) = 5d-3
       end do
-
-      call print_vector(n_freq, n_z, "n_freq")
-      call print_vector(kappa, n_z, "kappa")
   
       ! Calculate the derivative of diffusivity with respect to depth
       call dydx_array(z, kappa, dkappadz, n_z)
@@ -81,19 +79,23 @@ contains
 
       ! Calculate the RHS vector
       ! Dirichlet boundary condition at the top
-      b_vec(1) = sa_bc(i+1)
+      bx_vec(1, 1) = sa_bc(i+1)
+      bx_vec(1, 2) = tis_bc(i+1)
       ! Neuamnn boundary condition at the bottom
-      b_vec(n_z) = 0d0
+      bx_vec(n_z, 1) = 0d0
+      bx_vec(n_z, 2) = 0d0
 
       ! Set the interior points to the current salinity values
       do j = 2, (n_z-1)
-        b_vec(j) = sa(j, i)
+        bx_vec(j, 1) = sa(j, i)
+        bx_vec(j, 2) = tis(j, i)
       end do
 
-      call dgesv(n_z, 1, A_mat, n_z, ipiv, b_vec, n_z, info)
+      call dgesv(n_z, 2, A_mat, n_z, ipiv, bx_vec, n_z, info)
 
       do j = 1, n_z
-        sa(j, i+1) = b_vec(j)
+        sa(j, i+1) = bx_vec(j, 1)
+        tis(j, i+1) = bx_vec(j, 2)
       end do
     end do
   end subroutine compute
@@ -141,10 +143,11 @@ contains
     end do
   end subroutine init_A
 
-  function calc_diffusivity(n_freq, a0, q) result(kappa)
+  function calc_diffusivity(n_freq, kappa_f_coefs) result(kappa)
     ! Estimate diffusivity, as per Gargett et al. (1984), Young et al. (1988)
     implicit none
-    double precision, intent(in) :: n_freq, a0, q
+    double precision, intent(in) :: n_freq
+    double precision, dimension(2), intent(in) :: kappa_f_coefs
     double precision :: kappa
 
     ! check if n_freq is nan
@@ -153,7 +156,7 @@ contains
       return
     end if
 
-    kappa = a0 * exp(-q * n_freq)
+    kappa = kappa_f_coefs(1) * n_freq**(-kappa_f_coefs(2))
   end function calc_diffusivity
 
   subroutine calc_buoyancy_frequency(rho, z, n_freq, n_freq2, n_z)
