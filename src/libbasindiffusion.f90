@@ -30,7 +30,8 @@ contains
 
     double precision :: dz, dt
 
-    double precision, dimension(n_z, n_z) :: A_mat
+    ! double precision, dimension(n_z, n_z) :: A_mat
+    double precision, dimension(3+1, n_z) :: A_mat_band
     double precision, dimension(n_z, 2) :: bx_vec
 
     double precision, dimension(2) :: kappa_f_coefs
@@ -44,15 +45,6 @@ contains
 
     ! Calculate the derivative of area with respect to depth
     call dydx_array(z, a, dadz, n_z)
-
-    ! ##############################
-    ! #  Initialise the A matrix   #
-    ! ##############################
-    do i = 1, n_z
-      do j = 1, n_z
-        A_mat(i, j) = 0.d0
-      end do
-    end do
 
     do i = 1, (n_t-1)
       do j = 1, n_z
@@ -75,7 +67,7 @@ contains
       call dydx_array(z, kappa, dkappadz, n_z)
 
       ! Calculate the A matrix
-      call compute_A(A_mat, kappa, dkappadz, a, dadz, dz, dt, n_z)
+      call compute_A(A_mat_band, kappa, dkappadz, a, dadz, dz, dt, n_z)
 
       ! Calculate the RHS vector
       ! Dirichlet boundary condition at the top
@@ -91,7 +83,8 @@ contains
         bx_vec(j, 2) = tis(j, i)
       end do
 
-      call dgesv(n_z, 2, A_mat, n_z, ipiv, bx_vec, n_z, info)
+      ! call dgesv(n_z, 2, A_mat, n_z, ipiv, bx_vec, n_z, info)
+      call dgbsv(n_z, 1, 1, 2, A_mat_band, 4, ipiv, bx_vec, n_z, info)
 
       do j = 1, n_z
         sa(j, i+1) = bx_vec(j, 1)
@@ -100,19 +93,20 @@ contains
     end do
   end subroutine compute
 
-  subroutine compute_A(A_mat, kappa, dkappadz, a, dadz, dz, dt, n_z)
+  subroutine compute_A(A_mat_band, kappa, dkappadz, a, dadz, dz, dt, n_z)
     implicit none
     integer, intent(in) :: n_z
-    double precision, dimension(n_z, n_z), intent(out) :: A_mat
+    double precision, dimension(3+1, n_z), intent(out) :: A_mat_band
     double precision, dimension(n_z), intent(in) :: kappa, dkappadz, a, dadz
     double precision, intent(in) :: dz, dt
     double precision :: alpha, beta
     integer :: i
 
-    call init_A(A_mat, n_z)
+    ! call init_A(A_mat, n_z)
+    call init_A_band(A_mat_band, n_z, 3)
 
     ! Set the top of the water column as a Dirichlet boundary condition
-    A_mat(1, 1) = 1.d0
+    A_mat_band(2+1, 1) = 1.d0
 
     do i = 2, (n_z-1)
       ! Calculate the FDM coefficients
@@ -120,14 +114,14 @@ contains
       beta = kappa(i) / (dz**2)
     
       ! Fill out the A matrix
-      A_mat(i, i-1) = dt * (alpha - beta)
-      A_mat(i, i) = 1.d0 + 2.d0 * dt * beta
-      A_mat(i, i+1) = -dt * (alpha + beta)
+      A_mat_band(3+1, i-1) = dt * (alpha - beta)
+      A_mat_band(2+1, i) = 1.d0 + 2.d0 * dt * beta
+      A_mat_band(1+1, i+1) = -dt * (alpha + beta)
     end do
 
     ! Set the bottom of the water column as a Neumann boundary condition
-    A_mat(n_z, n_z-1) = -1.d0
-    A_mat(n_z, n_z) = 1.d0
+    A_mat_band(3+1, n_z-1) = -1.d0
+    A_mat_band(2+1, n_z) = 1.d0
   end subroutine compute_A
 
   subroutine init_A(A_mat, n_z) 
@@ -142,6 +136,19 @@ contains
       end do
     end do
   end subroutine init_A
+
+  subroutine init_A_band(A_mat, n_z, n_band) 
+    implicit none
+    integer, intent(in) :: n_z, n_band
+    double precision, dimension(n_band, n_z), intent(out) :: A_mat
+    integer :: i, j
+
+    do i = 1, n_band
+      do j = 1, n_z
+        A_mat(i, j) = 0.d0
+      end do
+    end do
+  end subroutine init_A_band
 
   function calc_diffusivity(n_freq, kappa_f_coefs) result(kappa)
     ! Estimate diffusivity, as per Gargett et al. (1984), Young et al. (1988)
