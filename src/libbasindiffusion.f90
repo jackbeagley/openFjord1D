@@ -12,21 +12,16 @@ implicit none
   ! Set latitude to Doubtful Sound
   double precision, parameter :: lat = -45.5
 
-  ! Diffusivity constants
-  ! double precision, parameter :: a0_diff = 2.d-3
-  double precision, parameter :: a0_diff = 2.d-5
-  double precision, parameter :: q_diff = 1.6d0
-
 contains
-  subroutine compute(z, a, sa, tis, rho, t, sa_bc, tis_bc, kappa_f_coefs, n_z, n_t)
+  subroutine compute(z, a, sa, tis, rho, kappa, t, sa_bc, tis_bc, kappa_f_coefs, n_z, n_t)
     implicit none
     integer, intent(in) :: n_z, n_t
     double precision, dimension(n_z), intent(inout) :: z, a
-    double precision, dimension(n_z, n_t), intent(inout) :: sa, tis, rho
+    double precision, dimension(n_z, n_t), intent(inout) :: sa, tis, rho, kappa
     double precision, dimension(n_t), intent(in) :: t, sa_bc, tis_bc
-    integer :: i, j, k
+    integer :: i, j
 
-    double precision, dimension(n_z) :: p, ct, n_freq, n_freq2, kappa, dadz, dkappadz
+    double precision, dimension(n_z) :: p, n_freq, n_freq2, dadz, dkappadz
 
     double precision :: dz, dt
 
@@ -50,24 +45,25 @@ contains
       do j = 1, n_z
         ! Pressure from depth
         p(j) = gsw_p_from_z(z(j), lat)
-        ! Density from absolute salinity, conservative temperature and pressure
+
+        ! Density from absolute salinity, in-situ temperature and pressure
         rho(j, i) = gsw_rho_t_exact(sa(j, i), tis(j, i), p(j))
       end do
 
       ! Calculate the Brunt-Vaisala (buoyancy) frequency
-      call calc_buoyancy_frequency(rho, z, n_freq, n_freq2, n_z)
+      call calc_buoyancy_frequency(rho(:, i), z, n_freq, n_freq2, n_z)
   
       ! Calculate the diffusivity
       do j = 1, n_z
-        kappa(j) = calc_diffusivity(n_freq(j), kappa_f_coefs)
+        kappa(j, i) = calc_diffusivity(n_freq(j), kappa_f_coefs)
         ! kappa(j) = 5d-3
       end do
   
       ! Calculate the derivative of diffusivity with respect to depth
-      call dydx_array(z, kappa, dkappadz, n_z)
+      call dydx_array(z, kappa(:, i), dkappadz, n_z)
 
       ! Calculate the A matrix
-      call compute_A(A_mat_band, kappa, dkappadz, a, dadz, dz, dt, n_z)
+      call compute_A(A_mat_band, kappa(:, i), dkappadz, a, dadz, dz, dt, n_z)
 
       ! Calculate the RHS vector
       ! Dirichlet boundary condition at the top
@@ -103,7 +99,7 @@ contains
     integer :: i
 
     ! call init_A(A_mat, n_z)
-    call init_A_band(A_mat_band, n_z, 3)
+    call init_A_band(A_mat_band, n_z, 3+1)
 
     ! Set the top of the water column as a Dirichlet boundary condition
     A_mat_band(2+1, 1) = 1.d0
