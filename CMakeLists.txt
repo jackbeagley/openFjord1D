@@ -14,71 +14,113 @@ message(
   )
 endif()
 
+# Set a flag for whether to build a cpython shared library
+option(BUILD_CPYTHON_SHARED_LIB "Build a shared library for use with CPython" ON)
+
+set(Fortran_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
 # Set source files
-set(SOURCE
-  src/libbasindiffusion.f90
-  src/debug_tools.f90
+set(MAIN_SOURCE
+  libbasindiffusion.f90
+)
+set(AUX_SOURCE
+  debug_tools.f90
 )
 
-# Grab Python, 3.8 or newer
-find_package(Python 3.11 REQUIRED
-  COMPONENTS Interpreter Development.Module NumPy)
+# Set temporary directory for preprocessed files
+set(CMAKE_PREPROCESSED_DIR ${CMAKE_BINARY_DIR}/preprocessed)
 
-# Grab the variables from a local Python installation
-# F2PY headers
-execute_process(
-  COMMAND "${Python_EXECUTABLE}"
-  -c "import numpy.f2py; print(numpy.f2py.get_include())"
-  OUTPUT_VARIABLE F2PY_INCLUDE_DIR
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-)
+# Append "_preprocessed" to the source file name
+string(REGEX REPLACE "\\.f90$" "_preprocessed.f90" MAIN_SOURCE_PREPROCESSED ${MAIN_SOURCE})  
 
-# Print out the discovered paths
-include(CMakePrintHelpers)
-cmake_print_variables(Python_INCLUDE_DIRS)
-cmake_print_variables(F2PY_INCLUDE_DIR)
-cmake_print_variables(Python_NumPy_INCLUDE_DIRS)
-
-# Set up the library
-# add_library(${CMAKE_PROJECT_NAME} SHARED
-#   src/libbasindiffusion.f90
-# )
-
-# Common variables
-set(f2py_module_name "${CMAKE_PROJECT_NAME}")
-set(fortran_src_file "${CMAKE_SOURCE_DIR}/src/libbasindiffusion.f90")
-set(f2py_module_c "${f2py_module_name}module.c")
-set(f2py_fortran_wrapper "${f2py_module_name}-f2pywrappers2.f90")
-
-# Generate sources
+# Create a target which produces the source *.f90 files after the preprocessor output
 add_custom_target(
-  genpyf
-  DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/${f2py_module_c}"
+  preprocess
+  DEPENDS ${CMAKE_PREPROCESSED_DIR}/${MAIN_SOURCE_PREPROCESSED}
 )
+
+# Print out the preprocessed source files
+foreach(source_file ${SOURCE_PREPROCESSED})
+  message(STATUS "Preprocessed source file: ${source_file}")
+endforeach()
+
+# Add a custom command to run the preprocessor
 add_custom_command(
-  OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${f2py_module_c}" "${CMAKE_CURRENT_BINARY_DIR}/${f2py_fortran_wrapper}"
-  COMMAND ${Python_EXECUTABLE}  -m "numpy.f2py"
-                   -m "${f2py_module_name}"
-                   "${fortran_src_file}"
-                   --lower # Important
-                  #  --verbose
-  DEPENDS ${fortran_src_file} # Fortran source
+  OUTPUT ${CMAKE_PREPROCESSED_DIR}/${MAIN_SOURCE_PREPROCESSED}
+  COMMAND ${CMAKE_Fortran_COMPILER}
+    ${CMAKE_Fortran_FLAGS}
+    -E
+    -cpp
+    -P
+    ${Fortran_SOURCE_DIR}/${MAIN_SOURCE}
+    > ${CMAKE_PREPROCESSED_DIR}/${MAIN_SOURCE_PREPROCESSED}
+  DEPENDS "${Fortran_SOURCE_DIR}/${MAIN_SOURCE}"
 )
 
-# Set up target
-Python_add_library(${CMAKE_PROJECT_NAME} MODULE WITH_SOABI
-  "${CMAKE_CURRENT_BINARY_DIR}/${f2py_module_c}" # Generated
-  "${F2PY_INCLUDE_DIR}/fortranobject.c" # From NumPy
-  "${SOURCE}" # Fortran source(s)
-  "${CMAKE_CURRENT_BINARY_DIR}/${f2py_fortran_wrapper}" # Fortran wrapper
-)
+message(STATUS ${PREPROCESS_CMD})
 
-set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES DEBUG_POSTFIX "")
+include(CMakePrintHelpers)
 
-# Depend on sources
-target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE Python::NumPy)
-add_dependencies(${CMAKE_PROJECT_NAME} genpyf)
-target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE "${F2PY_INCLUDE_DIR}")
+if(BUILD_CPYTHON_SHARED_LIB)
+  # Grab Python, 3.8 or newer
+  find_package(Python 3.11 REQUIRED
+    COMPONENTS Interpreter Development.Module NumPy)
+
+  # Grab the variables from a local Python installation
+  # F2PY headers
+  execute_process(
+    COMMAND "${Python_EXECUTABLE}"
+    -c "import numpy.f2py; print(numpy.f2py.get_include())"
+    OUTPUT_VARIABLE F2PY_INCLUDE_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+
+  # Print out the discovered paths
+  cmake_print_variables(Python_INCLUDE_DIRS)
+  cmake_print_variables(F2PY_INCLUDE_DIR)
+  cmake_print_variables(Python_NumPy_INCLUDE_DIRS)
+
+  set(f2py_module_name "${CMAKE_PROJECT_NAME}")
+  set(fortran_src_file "${CMAKE_SOURCE_DIR}/src/libbasindiffusion.f90")
+  set(f2py_module_c "${f2py_module_name}module.c")
+  set(f2py_fortran_wrapper "${f2py_module_name}-f2pywrappers2.f90")
+
+  # Generate sources
+  add_custom_target(
+    genpyf
+    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/${f2py_module_c}"
+  )
+
+  add_custom_command(
+    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${f2py_module_c}" "${CMAKE_CURRENT_BINARY_DIR}/${f2py_fortran_wrapper}"
+    COMMAND ${Python_EXECUTABLE}  -m "numpy.f2py"
+                     -m "${f2py_module_name}"
+                     "${CMAKE_PREPROCESSED_DIR}/${MAIN_SOURCE_PREPROCESSED}"
+                     --lower # Important
+                    #  --verbose
+    DEPENDS ${CMAKE_PREPROCESSED_DIR}/${MAIN_SOURCE_PREPROCESSED} # Fortran source
+  )
+
+  # Set up target
+  Python_add_library(${CMAKE_PROJECT_NAME} MODULE WITH_SOABI
+    "${CMAKE_CURRENT_BINARY_DIR}/${f2py_module_c}" # Generated
+    "${F2PY_INCLUDE_DIR}/fortranobject.c" # From NumPy
+    "${CMAKE_PREPROCESSED_DIR}/${MAIN_SOURCE_PREPROCESSED}" # Fortran source(s)
+    "${CMAKE_CURRENT_BINARY_DIR}/${f2py_fortran_wrapper}" # Fortran wrapper
+  )
+
+  set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES DEBUG_POSTFIX "")
+
+  # Depend on sources
+  target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE Python::NumPy)
+  add_dependencies(${CMAKE_PROJECT_NAME} genpyf)
+  target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE "${F2PY_INCLUDE_DIR}")
+else()
+  add_library(${CMAKE_PROJECT_NAME} SHARED
+    ${Fortran_SOURCE_DIR}/${MAIN_SOURCE}
+    ${Fortran_SOURCE_DIR}/${AUX_SOURCE}
+  )
+endif()
 
 set(MODULE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/mod)
 set(CMAKE_Fortran_MODULE_DIRECTORY ${MODULE_OUTPUT_DIRECTORY})
@@ -86,9 +128,11 @@ set_directory_properties(PROPERTIES Fortran_MODULE_DIRECTORY ${MODULE_OUTPUT_DIR
 
 set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES Fortran_MODULE_DIRECTORY ${MODULE_OUTPUT_DIRECTORY})
 
+## GSW
 # Add the directory for GSW
 add_subdirectory(extern/gsw)
 
+# Reset the Fortran module directory for GSW
 get_property(subdirectory_targets DIRECTORY extern/gsw PROPERTY BUILDSYSTEM_TARGETS)
 
 foreach(target ${subdirectory_targets})
@@ -99,6 +143,7 @@ endforeach()
 # Link the shared library to the static library
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE gsw_static)
 
+## LAPACK
 find_package(LAPACK REQUIRED)
 include_directories(${LAPACK_INCLUDE_DIRS})
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${LAPACK_LIBRARIES})
