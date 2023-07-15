@@ -24,18 +24,28 @@ set(MAIN_SOURCE
   libbasindiffusion.f90
 )
 set(AUX_SOURCE
-  debug_tools.f90
+  linalg_tools.f90
+  linalg_debug.f90
+  oceanography_tools.f90
+  constants.f90
 )
+
+# Create a list with the resolved paths to the auxiliary source files
+set(AUX_SOURCE_FULL "")
+
+foreach(source_file ${AUX_SOURCE})
+  list(APPEND AUX_SOURCE_FULL ${Fortran_SOURCE_DIR}/${source_file})
+endforeach()
 
 # Set temporary directory for preprocessed files
 set(CMAKE_PREPROCESSED_DIR ${CMAKE_BINARY_DIR}/preprocessed)
 
-# Append "_preprocessed" to the source file name
+# Append "_preprocessed" to the main source file name
 string(REGEX REPLACE "\\.f90$" "_preprocessed.f90" MAIN_SOURCE_PREPROCESSED ${MAIN_SOURCE})  
 
 # Create a target which produces the source *.f90 files after the preprocessor output
 add_custom_target(
-  preprocess
+  main_preprocessed
   DEPENDS ${CMAKE_PREPROCESSED_DIR}/${MAIN_SOURCE_PREPROCESSED}
 )
 
@@ -107,6 +117,7 @@ if(BUILD_CPYTHON_SHARED_LIB)
     "${F2PY_INCLUDE_DIR}/fortranobject.c" # From NumPy
     "${CMAKE_PREPROCESSED_DIR}/${MAIN_SOURCE_PREPROCESSED}" # Fortran source(s)
     "${CMAKE_CURRENT_BINARY_DIR}/${f2py_fortran_wrapper}" # Fortran wrapper
+    ${AUX_SOURCE_FULL} # Aux source
   )
 
   set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES DEBUG_POSTFIX "")

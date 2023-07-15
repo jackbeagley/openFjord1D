@@ -1,4 +1,4 @@
-module matrix_debug
+module linalg_debug
 implicit none
 
 public :: print_matrix, print_vector
@@ -37,4 +37,4 @@ subroutine print_vector(b, n, title)
     write(*, *) ""
 end subroutine print_vector
 
-end module matrix_debug
+end module linalg_debug

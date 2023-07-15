@@ -1,23 +1,33 @@
-module basindiffusion
+#define N_DERIVED 3
+#define I_KAPPA 1
+#define I_N_FREQ 2
+#define I_RHO 3
+
+module indices
+  ! Export variables for accessing the derived variables
+  integer, parameter :: n_derived = N_DERIVED
+  integer, parameter :: kappa = I_KAPPA
+  integer, parameter :: n_freq = I_N_FREQ
+  integer, parameter :: rho = I_RHO
+end module indices
+
+module basin
 use gsw_mod_toolbox
-use matrix_debug
+use linalg_debug
+use linalg_tools
+use oceanography_tools
 
 implicit none
-  ! Public interface of the library
-  public :: compute
-
-  ! Declare a constant for gravity
-  double precision, parameter :: g = 9.80665
-
   ! Set latitude to Doubtful Sound
   double precision, parameter :: lat = -45.5
 
 contains
-  subroutine compute(z, a, sa, tis, rho, kappa, t, sa_bc, tis_bc, kappa_f_coefs, n_z, n_t)
+  subroutine compute(z, a, sa, tis, derived, t, sa_bc, tis_bc, kappa_f_coefs, n_z, n_t)
     implicit none
     integer, intent(in) :: n_z, n_t
     double precision, dimension(n_z), intent(inout) :: z, a
-    double precision, dimension(n_z, n_t), intent(inout) :: sa, tis, rho, kappa
+    double precision, dimension(n_z, n_t), intent(inout) :: sa, tis
+    double precision, dimension(n_z, n_t, N_DERIVED), intent(inout) :: derived
     double precision, dimension(n_t), intent(in) :: t, sa_bc, tis_bc
     integer :: i, j
 
@@ -47,23 +57,23 @@ contains
         p(j) = gsw_p_from_z(z(j), lat)
 
         ! Density from absolute salinity, in-situ temperature and pressure
-        rho(j, i) = gsw_rho_t_exact(sa(j, i), tis(j, i), p(j))
+        derived(j, i, I_RHO) = gsw_rho_t_exact(sa(j, i), tis(j, i), p(j))
       end do
 
       ! Calculate the Brunt-Vaisala (buoyancy) frequency
-      call calc_buoyancy_frequency(rho(:, i), z, n_freq, n_freq2, n_z)
+      call calc_buoyancy_frequency(derived(:, i, I_RHO), z, n_freq, n_freq2, n_z)
   
       ! Calculate the diffusivity
       do j = 1, n_z
-        kappa(j, i) = calc_diffusivity(n_freq(j), kappa_f_coefs)
+        derived(j, i, I_KAPPA) = calc_diffusivity(n_freq(j), kappa_f_coefs)
         ! kappa(j) = 5d-3
       end do
   
       ! Calculate the derivative of diffusivity with respect to depth
-      call dydx_array(z, kappa(:, i), dkappadz, n_z)
+      call dydx_array(z, derived(:, i, I_KAPPA), dkappadz, n_z)
 
       ! Calculate the A matrix
-      call compute_A(A_mat_band, kappa(:, i), dkappadz, a, dadz, dz, dt, n_z)
+      call compute_A(A_mat_band, derived(:, i, I_KAPPA), dkappadz, a, dadz, dz, dt, n_z)
 
       ! Calculate the RHS vector
       ! Dirichlet boundary condition at the top
@@ -99,7 +109,7 @@ contains
     integer :: i
 
     ! call init_A(A_mat, n_z)
-    call init_A_band(A_mat_band, n_z, 3+1)
+    call init_matrix(A_mat_band, n_z, 3+1)
 
     ! Set the top of the water column as a Dirichlet boundary condition
     A_mat_band(2+1, 1) = 1.d0
@@ -119,109 +129,4 @@ contains
     A_mat_band(3+1, n_z-1) = -1.d0
     A_mat_band(2+1, n_z) = 1.d0
   end subroutine compute_A
-
-  subroutine init_A(A_mat, n_z) 
-    implicit none
-    integer, intent(in) :: n_z
-    double precision, dimension(n_z, n_z), intent(out) :: A_mat
-    integer :: i, j
-
-    do i = 1, n_z
-      do j = 1, n_z
-        A_mat(i, j) = 0.d0
-      end do
-    end do
-  end subroutine init_A
-
-  subroutine init_A_band(A_mat, n_z, n_band) 
-    implicit none
-    integer, intent(in) :: n_z, n_band
-    double precision, dimension(n_band, n_z), intent(out) :: A_mat
-    integer :: i, j
-
-    do i = 1, n_band
-      do j = 1, n_z
-        A_mat(i, j) = 0.d0
-      end do
-    end do
-  end subroutine init_A_band
-
-  function calc_diffusivity(n_freq, kappa_f_coefs) result(kappa)
-    ! Estimate diffusivity, as per Gargett et al. (1984), Young et al. (1988)
-    implicit none
-    double precision, intent(in) :: n_freq
-    double precision, dimension(2), intent(in) :: kappa_f_coefs
-    double precision :: kappa
-
-    ! check if n_freq is nan
-    if (isnan(n_freq)) then
-      kappa = 0d0
-      return
-    end if
-
-    kappa = kappa_f_coefs(1) * n_freq**(-kappa_f_coefs(2))
-  end function calc_diffusivity
-
-  subroutine calc_buoyancy_frequency(rho, z, n_freq, n_freq2, n_z)
-    implicit none
-    integer, intent(in) :: n_z
-    double precision, dimension(n_z), intent(in) :: rho, z
-    double precision, dimension(n_z), intent(out) :: n_freq, n_freq2
-    double precision, dimension(n_z) :: drho_dz
-
-    integer :: i
-
-    ! Calculate the derivative of density with respect to depth
-    call dydx_array(z, rho, drho_dz, n_z)
-
-    ! Calculate the Brunt-Vaisala (buoyancy) frequency
-    do i = 1, n_z
-      n_freq2(i) = -g * drho_dz(i) / rho(i)
-      n_freq(i) = sqrt(abs(n_freq2(i)))
-    end do
-  end subroutine calc_buoyancy_frequency
-
-  function dydx_centre(x, y, i) result(dydx)
-    implicit none
-    integer, intent(in) :: i
-    double precision, dimension(i), intent(in) :: x, y
-    double precision :: dydx
-
-    dydx = (y(i+1) - y(i-1)) / (x(i+1) - x(i-1))
-  end function dydx_centre
-
-  function dydx_forward(x, y, i) result(dydx)
-    implicit none
-    integer, intent(in) :: i
-    double precision, dimension(i), intent(in) :: x, y
-    double precision :: dydx
-
-    dydx = (y(i+1) - y(i)) / (x(i+1) - x(i))
-  end function dydx_forward
-
-  function dydx_backward(x, y, i) result(dydx)
-    implicit none
-    integer, intent(in) :: i
-    double precision, dimension(i), intent(in) :: x, y
-    double precision :: dydx
-
-    dydx = (y(i) - y(i-1)) / (x(i) - x(i-1))
-  end function dydx_backward
-
-  subroutine dydx_array(x, y, dydx, n)
-    implicit none
-    integer, intent(in) :: n
-    double precision, dimension(n), intent(in) :: x, y
-    double precision, dimension(n), intent(out) :: dydx
-
-    integer :: i
-
-    dydx(1) = dydx_forward(x, y, 1)
-    dydx(n) = dydx_backward(x, y, n)
-
-    do i = 2, n - 1
-      dydx(i) = dydx_centre(x, y, i)
-    end do
-  end subroutine dydx_array
-
-end module basindiffusion
+end module basin
