@@ -100,8 +100,14 @@ contains
   
       ! Calculate the diffusivity
       do j = 1, n_z
-        derived(j, i, I_KAPPA) = calc_diffusivity(n_freq(j), kappa_coefs)
-        ! kappa(j) = 5d-3
+        select case (diffusivity_mode)
+        case (diff_constant)
+          ! Constant diffusivity
+          derived(j, i, I_KAPPA) = kappa_coefs(1)
+        case (diff_buoyancy)
+          ! Diffusivity varying with buoyancy frequency
+          derived(j, i, I_KAPPA) = calc_diffusivity(n_freq(j), kappa_coefs)
+        end select
       end do
   
       ! Calculate the derivative of diffusivity with respect to depth

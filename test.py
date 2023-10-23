@@ -55,8 +55,9 @@ sa_bc = sa_offshore_f(t/year_seconds*365)
 tis_bc = tis_offshore_f(t/year_seconds*365)
 
 kappa_buoyancy_coefs = [2e-7, 1.6]
+kappa_const = 1e-4
 
-bd.basin.compute(z, a, sa, tis, derived, t, sa_bc, tis_bc, bd.computation_modes.normal, bd.diffusivity_modes.buoyancy, kappa_buoyancy_coefs)
+bd.basin.compute(z, a, sa, tis, derived, t, sa_bc, tis_bc, bd.computation_modes.normal, bd.diffusivity_modes.constant, [kappa_const, np.nan])
 
 kappa = derived[:, :, bd.indices.kappa-1]
 rho = derived[:, :, bd.indices.rho-1]
