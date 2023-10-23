@@ -11,20 +11,55 @@ module indices
   integer, parameter :: rho = I_RHO
 end module indices
 
+module diffusivity_modes
+  ! Export variables for different diffusivity modes
+  integer, parameter :: constant = 0
+  integer, parameter :: buoyancy = 1
+end module diffusivity_modes
+
+module computation_modes
+  ! Export variables for different computation modes
+  integer, parameter :: normal = 0
+  integer, parameter :: closed_top = 1
+end module
+
 module basin
 use gsw_mod_toolbox
 use linalg_debug
 use linalg_tools
 use oceanography_tools
+use diffusivity_modes, only: &
+  diff_constant => constant, &
+  diff_buoyancy => buoyancy
+use computation_modes, only: &
+  comp_normal => normal, &
+  comp_closed_top => closed_top
 
 implicit none
   ! Set latitude to Doubtful Sound
   double precision, parameter :: lat = -45.5
 
 contains
-  subroutine compute(z, a, sa, tis, derived, t, sa_bc, tis_bc, kappa_f_coefs, n_z, n_t)
+  subroutine compute(z, a, sa, tis, derived, t, sa_bc, tis_bc, computation_mode, diffusivity_mode, kappa_coefs, n_z, n_t)
+    ! Compute the salinity and temperature evolution along with other parameters in the
+    ! water column as a consequence of the diffusivity and boundary conditions.
+    ! Input:
+    !   z - depths to compute at
+    !   a - area at each depth
+    !   sa - absolute salinity at each depth and time (first column is initial condition)
+    !   tis - in-situ temperature at each depth and time (first column is initial condition)
+    !   derived - derived parameters at each depth and time
+    !   t - times to compute at
+    !   sa_bc - boundary condition for absolute salinity
+    !   tis_bc - boundary condition for in-situ temperature
+    !   computation_mode - mode to compute in (0 = normal, 1 = closed top)
+    !   diffusivity_mode - mode to compute diffusivity in (0 = constant, 1 = buoyancy varying)
+    !   kappa_coefs - k=k_coefs(1)*N**k_coefs(2) OR k=k_coefs(1) for constant diffusivity 
+    !   n_z - number of depths
+    !   n_t - number of times
+
     implicit none
-    integer, intent(in) :: n_z, n_t
+    integer, intent(in) :: computation_mode, diffusivity_mode, n_z, n_t
     double precision, dimension(n_z), intent(inout) :: z, a
     double precision, dimension(n_z, n_t), intent(inout) :: sa, tis
     double precision, dimension(n_z, n_t, N_DERIVED), intent(inout) :: derived
@@ -39,7 +74,7 @@ contains
     double precision, dimension(3+1, n_z) :: A_mat_band
     double precision, dimension(n_z, 2) :: bx_vec
 
-    double precision, dimension(2) :: kappa_f_coefs
+    double precision, dimension(2) :: kappa_coefs
     
     ! Output variables for DGESV
     integer, dimension(n_z) :: ipiv
@@ -65,7 +100,7 @@ contains
   
       ! Calculate the diffusivity
       do j = 1, n_z
-        derived(j, i, I_KAPPA) = calc_diffusivity(n_freq(j), kappa_f_coefs)
+        derived(j, i, I_KAPPA) = calc_diffusivity(n_freq(j), kappa_coefs)
         ! kappa(j) = 5d-3
       end do
   

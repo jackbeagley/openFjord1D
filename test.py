@@ -54,9 +54,9 @@ dz = (z[-1] - z[0]) / (n_z - 1)
 sa_bc = sa_offshore_f(t/year_seconds*365)
 tis_bc = tis_offshore_f(t/year_seconds*365)
 
-kappa_f_coefs = [2e-7, 1.6]
+kappa_buoyancy_coefs = [2e-7, 1.6]
 
-bd.basin.compute(z, a, sa, tis, derived, t, sa_bc, tis_bc, kappa_f_coefs)
+bd.basin.compute(z, a, sa, tis, derived, t, sa_bc, tis_bc, bd.computation_modes.normal, bd.diffusivity_modes.buoyancy, kappa_buoyancy_coefs)
 
 kappa = derived[:, :, bd.indices.kappa-1]
 rho = derived[:, :, bd.indices.rho-1]
@@ -74,7 +74,7 @@ instability_mask_rgb = np.multiply(instability_mask[:, :, np.newaxis], [1.0, 0.0
 # calculate Brunt-Vaisala frequency
 N = np.sqrt(-(9.81 / rho) * rho_grad)
 
-kappa_py = kappa_f_coefs[0] * N ** (-kappa_f_coefs[1])
+kappa_py = kappa_buoyancy_coefs[0] * N ** (-kappa_buoyancy_coefs[1])
 kappa_py[np.isinf(kappa_py)] = np.nan
 
 kappa_range = np.nanquantile(kappa, [0.01, 0.99])
