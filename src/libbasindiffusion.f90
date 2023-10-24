@@ -114,12 +114,20 @@ contains
       call dydx_array(z, derived(:, i, I_KAPPA), dkappadz, n_z)
 
       ! Calculate the A matrix
-      call compute_A(A_mat_band, derived(:, i, I_KAPPA), dkappadz, a, dadz, dz, dt, n_z)
+      call compute_A(A_mat_band, derived(:, i, I_KAPPA), dkappadz, a, dadz, dz, dt, computation_mode, n_z)
 
       ! Calculate the RHS vector
-      ! Dirichlet boundary condition at the top
-      bx_vec(1, 1) = sa_bc(i+1)
-      bx_vec(1, 2) = tis_bc(i+1)
+      select case (computation_mode)
+      case (comp_normal)
+        ! Dirichlet boundary condition at the top
+        bx_vec(1, 1) = sa_bc(i+1)
+        bx_vec(1, 2) = tis_bc(i+1)
+      case (comp_closed_top)
+        ! Neumann boundary condition at the top
+        bx_vec(1, 1) = 0d0
+        bx_vec(1, 2) = 0d0
+      end select
+
       ! Neuamnn boundary condition at the bottom
       bx_vec(n_z, 1) = 0d0
       bx_vec(n_z, 2) = 0d0
@@ -133,6 +141,7 @@ contains
       ! call dgesv(n_z, 2, A_mat, n_z, ipiv, bx_vec, n_z, info)
       call dgbsv(n_z, 1, 1, 2, A_mat_band, 4, ipiv, bx_vec, n_z, info)
 
+      ! Populate the salinity and temperature arrays
       do j = 1, n_z
         sa(j, i+1) = bx_vec(j, 1)
         tis(j, i+1) = bx_vec(j, 2)
@@ -140,9 +149,9 @@ contains
     end do
   end subroutine compute
 
-  subroutine compute_A(A_mat_band, kappa, dkappadz, a, dadz, dz, dt, n_z)
+  subroutine compute_A(A_mat_band, kappa, dkappadz, a, dadz, dz, dt, computation_mode, n_z)
     implicit none
-    integer, intent(in) :: n_z
+    integer, intent(in) :: computation_mode, n_z
     double precision, dimension(3+1, n_z), intent(out) :: A_mat_band
     double precision, dimension(n_z), intent(in) :: kappa, dkappadz, a, dadz
     double precision, intent(in) :: dz, dt
@@ -152,8 +161,14 @@ contains
     ! call init_A(A_mat, n_z)
     call init_matrix(A_mat_band, n_z, 3+1)
 
-    ! Set the top of the water column as a Dirichlet boundary condition
-    A_mat_band(2+1, 1) = 1.d0
+    select case (computation_mode)
+      case (comp_normal)
+        ! Set the top of the water column as a Dirichlet boundary condition
+        A_mat_band(2+1, 1) = 1.d0
+      case (comp_closed_top)
+        A_mat_band(1+1, 2) = 1.d0
+        A_mat_band(2+1, 1) = -1.d0
+    end select
 
     do i = 2, (n_z-1)
       ! Calculate the FDM coefficients
