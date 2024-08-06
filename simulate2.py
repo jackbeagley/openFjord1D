@@ -23,24 +23,14 @@ scenarios = {
 	}
 
 n_z = 1000
-n_kappa = 3
 
-LATITUDE = -45.5
-
-DEPTH = 55
 z = np.linspace(-55, -127, n_z)
 hypso_df = pd.read_csv('deep_cove_north_hypsography.csv')
-kappa_vals = [5e-5, 1e-4, 8e-4]	# Range for Deep Cove North
-site = 'Deep Cove North Basin'
-site_short = 'deep_cove'
+kappa_const = 1e-4  # Estimate for Deep Cove
 
-#DEPTH = 130
 #z = np.linspace(-130, -430, n_z)
+#kappa_const = 1e-3  # Estimate for Malaspina Reach
 #hypso_df = pd.read_csv('malaspina_hypsography.csv')
-#kappa_vals = [5e-4, 1e-3, 8e-3]	# Range for Malaspina Reach
-#site = 'Malaspina Reach'
-#site_short = 'malaspina_reach'
-
 
 # resample the hypsography by interpolating at specified z values
 a = np.interp(z, hypso_df['z'], hypso_df['a'])	
@@ -49,7 +39,7 @@ def init_mesh(mesh, ic):
 	mesh[:, 0] = ic
 	
 for scenario in scenarios:
-	ds = scenarios[scenario]['ds'].sel(depth=DEPTH, method='nearest')
+	ds = scenarios[scenario]['ds']
 
 	start_date = ds['time'].values[0]
 	end_date = ds['time'].values[-1]
@@ -69,6 +59,7 @@ for scenario in scenarios:
 
 	init_mesh(sa, np.linspace(35.32, 35.24, n_z))
 	init_mesh(tis, np.linspace(13.0, 12.2, n_z))
+	
 
 	
 	# set the time span in seconds
@@ -84,6 +75,7 @@ for scenario in scenarios:
 	
 	kappa_buoyancy_coefs = [2e-7, 1.6]
 
+	
 	#sa_bc = ds_offshore_doubtful['so'].values
 	#tis_bc = gsw.t_from_CT(sa_bc, ds_offshore_doubtful['thetao'].values, 0)
 	
@@ -91,52 +83,47 @@ for scenario in scenarios:
 	#	sa_bc = scenarios[scenario]['salinity'].values
 	#	tis_bc = gsw.t_from_CT(sa_bc, scenarios[scenario]['temperature'].values, 0)
 	#		
+	kappa_vals = [5e-4, 1e-3, 8e-3]
 	
-	ds_out = xr.Dataset(
-		{
-			'sa': (['kappa', 'depth', 'time'], np.empty((n_kappa, n_z, n_t))),
-			'tis': (['kappa', 'depth', 'time'], np.empty((n_kappa, n_z, n_t))),
-			'ct': (['kappa', 'depth', 'time'], np.empty((n_kappa, n_z, n_t))),
-			'rho': (['kappa', 'depth', 'time'], np.empty((n_kappa, n_z, n_t))),
-			'sigma0': (['kappa', 'depth', 'time'], np.empty((n_kappa, n_z, n_t))),
-			'pres': (['depth'], gsw.p_from_z(z, LATITUDE)),
-			'renewal': (['kappa', 'depth', 'time'], np.empty((n_kappa, n_z, n_t), dtype='bool')),
-			'n_freq': (['kappa', 'depth', 'time'], np.empty((n_kappa, n_z, n_t))),
-		},
-		coords={
-			'kappa': kappa_vals,
-			'depth': z,
-			'time': ds['time'],
-			},
-		attrs={
-			'kappa_mode': 'constant',
-			'site': site,
-			}
-	)
+	output = [{} for _ in range(len(kappa_vals))]
 
 	for i, kappa_val in enumerate(kappa_vals):
-		sa_sim = sa.copy(order='F')
-		tis_sim = tis.copy(order='F')
-		derived_sim = derived.copy(order='F')
+		output[i]['sa'] = sa.copy(order='F')
+		output[i]['tis'] = tis.copy(order='F')
+		output[i]['derived'] = derived.copy(order='F')
 	
-		bd.basin.compute(z, a, sa_sim, tis_sim, derived_sim, t, sa_bc, tis_bc, bd.computation_modes.normal, bd.diffusivity_modes.constant, bd.renewal_modes.enabled, [kappa_val, np.nan])
-		
-		pres = np.tile(ds_out['pres'], (n_t, 1)).T
-		ct = gsw.CT_from_t(sa_sim, tis_sim, pres)
-
-		sigma0 = gsw.sigma0(sa_sim, ct)
-		rho = gsw.rho(sa, tis, pres)
-
-		ds_out['sa'][i, :, :] = sa_sim
-		ds_out['tis'][i, :, :] = tis_sim
-		ds_out['ct'][i, :, :] = ct
-		ds_out['rho'][i, :, :] = rho
-		ds_out['sigma0'][i, :, :] = sigma0
-		ds_out['renewal'][i, :, :] = derived_sim[:, :, bd.indices.renewal-1]
-		ds_out['n_freq'][i, :, :] = derived_sim[:, :, bd.indices.n_freq-1]
-
-	ds_out.to_netcdf('output_{}_{}.nc'.format(site_short, scenario.lower()))
-
+		bd.basin.compute(z, a, output[i]['sa'], output[i]['tis'], output[i]['derived'], t, sa_bc, tis_bc, bd.computation_modes.normal, bd.diffusivity_modes.constant, bd.renewal_modes.enabled, [kappa_val, np.nan])
+	
+		sa = output[i]['sa']
+		tis = output[i]['tis']
+		derived = output[i]['derived']
+	
+		pres = gsw.p_from_z(z, 0)
+	
+		sigma0 = gsw.sigma0(sa, tis)
+		rho = gsw.rho(sa, tis, np.tile(pres, (n_t, 1)).T)
+	
+		ds = xr.Dataset(
+			{
+				'sa': (['depth', 'time'], sa),
+				'tis': (['depth', 'time'], tis),
+				'rho': (['depth', 'time'], rho),
+				'sigma0': (['depth', 'time'], sigma0),
+				'pres': (['depth'], pres),
+				'renewal': (['depth', 'time'], derived[:, :, bd.indices.renewal-1]),
+				'n_freq': (['depth', 'time'], derived[:, :, bd.indices.n_freq-1]),
+			},
+			coords={
+				'depth': np.abs(z),
+				'time': ds['time'],
+			},
+			attrs={
+				'kappa': kappa_val,
+				'kappa_mode': 'constant'
+				}
+		)
+	
+		ds.to_netcdf(f'basin_simulation_{kappa_val}.nc')
 	
 	## Create a plot of depth averaged properties over time
 	fig = plt.figure()
@@ -144,19 +131,15 @@ for scenario in scenarios:
 	ax_sa = fig.add_subplot(3, 1, 1)
 	ax_ct = fig.add_subplot(3, 1, 2)
 	ax_sigma0 = fig.add_subplot(3, 1, 3)
-
-	sa_mean = ds_out['sa'].mean(dim='depth')
-	tis_mean = ds_out['tis'].mean(dim='depth')
-	sigma0_mean = ds_out['sigma0'].mean(dim='depth')
-
-#	sa_mean = np.array([output[i]['sa'].mean(axis=0) for i in range(len(kappa_vals))])
-#	tis_mean = np.array([output[i]['tis'].mean(axis=0) for i in range(len(kappa_vals))])
-#	sigma0_mean = np.array([gsw.sigma0(sa_mean[i], tis_mean[i]) for i in range(len(kappa_vals))])
 	
-	sa_range = [sa_mean.min(dim='kappa'), sa_mean.max(dim='kappa')]
-	tis_range = [tis_mean.min(dim='kappa'), tis_mean.max(dim='kappa')]
-	sigma0_range = [sigma0_mean.min(dim='kappa'), sigma0_mean.max(dim='kappa')]
-
+	sa_mean = np.array([output[i]['sa'].mean(axis=0) for i in range(len(kappa_vals))])
+	tis_mean = np.array([output[i]['tis'].mean(axis=0) for i in range(len(kappa_vals))])
+	sigma0_mean = np.array([gsw.sigma0(sa_mean[i], tis_mean[i]) for i in range(len(kappa_vals))])
+	
+	sa_range = [sa_mean.min(axis=0), sa_mean.max(axis=0)]
+	tis_range = [tis_mean.min(axis=0), tis_mean.max(axis=0)]
+	sigma0_range = [sigma0_mean.min(axis=0), sigma0_mean.max(axis=0)]
+	
 	ax_sa.plot(ds['time'], sa_mean[1, :], label='$\\kappa ={:.0e}$'.format(kappa_vals[1]), color='blue')
 	ax_ct.plot(ds['time'], tis_mean[1, :], label='$\\kappa={:.0e}$'.format(kappa_vals[1]), color='blue')
 	ax_sigma0.plot(ds['time'], sigma0_mean[1, :], label='', color='blue')

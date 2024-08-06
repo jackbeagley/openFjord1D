@@ -1,7 +1,8 @@
-#define N_DERIVED 3
+#define N_DERIVED 4
 #define I_KAPPA 1
 #define I_N_FREQ 2
 #define I_RHO 3
+#define I_RENEWAL 4
 
 module indices
   ! Export variables for accessing the derived variables
@@ -9,6 +10,7 @@ module indices
   integer, parameter :: kappa = I_KAPPA
   integer, parameter :: n_freq = I_N_FREQ
   integer, parameter :: rho = I_RHO
+  integer, parameter :: renewal = I_RENEWAL
 end module indices
 
 module diffusivity_modes
@@ -21,7 +23,13 @@ module computation_modes
   ! Export variables for different computation modes
   integer, parameter :: normal = 0
   integer, parameter :: closed_top = 1
-end module
+end module computation_modes
+
+module renewal_modes
+  ! Export variables for renewal enabled/disabled
+  integer, parameter :: disabled = 0
+  integer, parameter :: enabled = 1
+end module renewal_modes
 
 module basin
 use gsw_mod_toolbox
@@ -34,13 +42,16 @@ use diffusivity_modes, only: &
 use computation_modes, only: &
   comp_normal => normal, &
   comp_closed_top => closed_top
+use renewal_modes, only: &
+  re_disabled => disabled, &
+  re_enabled => enabled
 
 implicit none
   ! Set latitude to Doubtful Sound
   double precision, parameter :: lat = -45.5
 
 contains
-  subroutine compute(z, a, sa, tis, derived, t, sa_bc, tis_bc, computation_mode, diffusivity_mode, kappa_coefs, n_z, n_t)
+  subroutine compute(z, a, sa, tis, derived, t, sa_bc, tis_bc, computation_mode, diffusivity_mode, renewal_mode, kappa_coefs, n_z, n_t)
     ! Compute the salinity and temperature evolution along with other parameters in the
     ! water column as a consequence of the diffusivity and boundary conditions.
     ! Input:
@@ -59,7 +70,7 @@ contains
     !   n_t - number of times
 
     implicit none
-    integer, intent(in) :: computation_mode, diffusivity_mode, n_z, n_t
+    integer, intent(in) :: computation_mode, diffusivity_mode, renewal_mode, n_z, n_t
     double precision, dimension(n_z), intent(inout) :: z, a
     double precision, dimension(n_z, n_t), intent(inout) :: sa, tis
     double precision, dimension(n_z, n_t, N_DERIVED), intent(inout) :: derived
@@ -70,12 +81,11 @@ contains
 
     double precision :: dz, dt
 
-    ! double precision, dimension(n_z, n_z) :: A_mat
     double precision, dimension(3+1, n_z) :: A_mat_band
     double precision, dimension(n_z, 2) :: bx_vec
 
     double precision, dimension(2) :: kappa_coefs
-    
+
     ! Output variables for DGESV
     integer, dimension(n_z) :: ipiv
     integer :: info
@@ -146,6 +156,13 @@ contains
         sa(j, i+1) = bx_vec(j, 1)
         tis(j, i+1) = bx_vec(j, 2)
       end do
+
+      ! Evaluate renewal
+      if (renewal_mode == re_enabled) then
+        call compute_renewal(sa(:, i+1), tis(:, i+1), sa_bc(i+1), tis_bc(i+1), derived(:, i, I_RENEWAL), n_z)
+      else
+        derived(:, i+1, I_RENEWAL) = 0d0
+      end if
     end do
   end subroutine compute
 
@@ -185,4 +202,42 @@ contains
     A_mat_band(3+1, n_z-1) = -1.d0
     A_mat_band(2+1, n_z) = 1.d0
   end subroutine compute_A
+
+  subroutine compute_renewal(sa, tis, sa_bc, tis_bc, renewed, n_z)
+    ! Compute the renewal of the water column
+    ! Input:
+    !   sa - absolute salinity at each depth (at a single time)
+    !   tis - in-situ temperature at each depth (at a single time)
+    !   sa_bc - boundary condition for absolute salinity
+    !   tis_bc - boundary condition for in-situ temperature
+
+    implicit none
+    integer, intent(in) :: n_z
+    double precision, dimension(n_z), intent(inout) :: sa, tis, renewed
+    double precision, intent(in) :: sa_bc, tis_bc
+    double precision, dimension(n_z) :: sigma0
+    double precision :: sigma0_bc
+    integer :: i
+
+    ! Calculate sigma-0 density (assuming tis == tcons)
+    sigma0 = gsw_sigma0(sa, tis)
+
+    sigma0_bc = gsw_sigma0(sa_bc, tis_bc)
+
+    ! Iterate over the water column
+    do i = 1, n_z
+      ! Check if the density is less than at the boundary
+      if (sigma0(i) < sigma0_bc) then
+        ! Renew the water column
+        sa(i) = sa_bc
+        tis(i) = tis_bc
+
+        ! Set the renewal flag to 1
+        renewed(i) = 1d0
+      else
+        ! Reset the renewal flag to 0
+        renewed(i) = 0d0
+      end if
+    end do
+    end subroutine compute_renewal
 end module basin
