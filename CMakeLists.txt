@@ -72,7 +72,7 @@ message(STATUS ${PREPROCESS_CMD})
 include(CMakePrintHelpers)
 
 if(BUILD_CPYTHON_SHARED_LIB)
-  # Grab Python, 3.8 or newer
+  # Grab Python, 3.11 or newer
   find_package(Python 3.11 REQUIRED
     COMPONENTS Interpreter Development.Module NumPy)
 
@@ -143,19 +143,9 @@ set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES Fortran_MODULE_DIRECTORY 
 # Add the directory for GSW
 add_subdirectory(extern/gsw)
 
-# Reset the Fortran module directory for GSW
-get_property(subdirectory_targets DIRECTORY extern/gsw PROPERTY BUILDSYSTEM_TARGETS)
-
-foreach(target ${subdirectory_targets})
-   set_target_properties(${target} PROPERTIES Fortran_MODULE_DIRECTORY ${MODULE_OUTPUT_DIRECTORY})
-   message(STATUS "Setting Fortran module directory for target ${target}: ${MODULE_OUTPUT_DIRECTORY}")
-endforeach()
-
-# Link the shared library to the static library
-target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE gsw_static)
-
 ## LAPACK
 find_package(LAPACK REQUIRED)
 include_directories(${LAPACK_INCLUDE_DIRS})
-target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${LAPACK_LIBRARIES})
+
+target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${LAPACK_LIBRARIES} gsw_static)
 

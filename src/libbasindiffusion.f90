@@ -1,3 +1,5 @@
+!! Create names for the indices of the derived variables
+! N_DERIVED must match the number of derived variables
 #define N_DERIVED 4
 #define I_KAPPA 1
 #define I_N_FREQ 2
@@ -89,7 +91,8 @@ contains
     ! Output variables for DGESV
     integer, dimension(n_z) :: ipiv
     integer :: info
-
+    
+    ! Calculate average time and depth spacing assuming constant spacing
     dz = (z(n_z) - z(1))/(n_z - 1)
     dt = (t(n_t) - t(1))/(n_t - 1)
 
@@ -109,16 +112,17 @@ contains
       call calc_buoyancy_frequency(derived(:, i, I_RHO), z, n_freq, n_freq2, n_z)
   
       ! Calculate the diffusivity
-      do j = 1, n_z
-        select case (diffusivity_mode)
+
+      select case (diffusivity_mode)
         case (diff_constant)
-          ! Constant diffusivity
-          derived(j, i, I_KAPPA) = kappa_coefs(1)
-        case (diff_buoyancy)
-          ! Diffusivity varying with buoyancy frequency
+	      ! Constant diffusivity
+      		derived(:, i, I_KAPPA) = kappa_coefs(1)
+      case (diff_buoyancy)
+		  do j = 1, n_z
+			! Diffusivity varying with buoyancy frequency
           derived(j, i, I_KAPPA) = calc_diffusivity(n_freq(j), kappa_coefs)
+		  end do
         end select
-      end do
   
       ! Calculate the derivative of diffusivity with respect to depth
       call dydx_array(z, derived(:, i, I_KAPPA), dkappadz, n_z)
