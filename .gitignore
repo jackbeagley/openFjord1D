@@ -1,2 +1,7 @@
 build/*
 extern/*
+
+# Output files
+*.nc
+*.csv
+*.pdf
