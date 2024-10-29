@@ -17,8 +17,8 @@ PLAT_TO_CMAKE = {
     "win-arm64": "ARM64",
 }
 
-def initialise_submodules():
-	subprocess.run(["git", "submodule", "update", "--init", "--recursive"], check=True)
+def initialise_submodules(dir = "."):
+	subprocess.run(["git", "submodule", "update", "--init", "--recursive"], cwd=dir, check=True)
 
 class CustomDevelopCommand(develop):
 	def run(self):
@@ -41,6 +41,11 @@ class CMakeExtension(Extension):
 
 class CMakeBuild(build_ext):
     def build_extension(self, ext: CMakeExtension) -> None:
+        package_dir = Path(__file__).resolve()
+		
+		# Make sure git submodules are initialised
+        initialise_submodules(package_dir)
+
         # Must be in this form due to bug in .resolve() only fixed in Python 3.10+
         ext_fullpath = Path.cwd() / self.get_ext_fullpath(ext.name)
         extdir = ext_fullpath.parent.resolve()
@@ -126,7 +131,7 @@ class CMakeBuild(build_ext):
                 build_args += [f"-j{self.parallel}"]
 
 		# Add the GSW path to the CMake arguments (should be in git submodule extern/gsw relative to this file
-        gsw_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'extern', 'gsw'))
+        gsw_path = os.path.abspath(os.path.join(package_dir, 'extern', 'gsw'))
 
         cmake_args += [f"-DGSW_PATH={gsw_path}"]
 
