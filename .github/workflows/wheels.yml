@@ -8,27 +8,24 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, macos-latest]
         #, windows-latest, macos-13, macos-latest]
 
     steps:
-      - name: Provide gfortran (macOS)
+      - name: Provide gfortran from Homebrew (macOS)
         if: runner.os == 'macOS'
         run: |
-          # https://github.com/actions/virtual-environments/issues/2524
-          # https://github.com/cbg-ethz/dce/blob/master/.github/workflows/pkgdown.yaml
-          sudo ln -s /usr/local/bin/gfortran-11 /usr/local/bin/gfortran
-          sudo mkdir /usr/local/gfortran
-          sudo ln -s /usr/local/Cellar/gcc@11/*/lib/gcc/11 /usr/local/gfortran/lib
-          gfortran --version
+          brew install gcc
+          brew install openblas
 
       - name: Provide gfortran (Windows)
         if: runner.os == 'Windows'
         uses: msys2/setup-msys2@v2
 
-      - name: Tell distutils to use mingw (Windows)
+      - name: Install and setup Fortran compilers and BLAS using Chocolatey (Windows)
         if: runner.os == 'Windows'
         run: |
+          choco install -y mingw
           echo "[build]`ncompiler=mingw32" | Out-File -Encoding ASCII ~/pydistutils.cfg
 
       - name: Install BLAS (Ubuntu)
