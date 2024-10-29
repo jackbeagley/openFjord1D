@@ -1,4 +1,4 @@
 #!/bin/bash
 
-cmake -S./ -B./build -G Ninja -DCMAKE_C_COMPILER=gcc-14
+cmake -S./src -B./build -DGSW_DIR=../extern/gsw
 cmake --build ./build
