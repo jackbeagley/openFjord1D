@@ -159,6 +159,11 @@ setup(
 		},
     zip_safe=False,
     python_requires=">=3.11",
+	build_requires=[
+		"cmake",
+		"ninja",
+		"numpy",
+		],
 	install_requires=[
 		"numpy",
 		],
