@@ -128,6 +128,8 @@ if(BUILD_CPYTHON_SHARED_LIB)
   target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE Python::NumPy)
   add_dependencies(${CMAKE_PROJECT_NAME} genpyf)
   target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE "${F2PY_INCLUDE_DIR}")
+
+  python_extension_module(${CMAKE_PROJECT_NAME})
 else()
   add_library(${CMAKE_PROJECT_NAME} SHARED
     ${Fortran_SOURCE_DIR}/${MAIN_SOURCE}
