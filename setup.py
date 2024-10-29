@@ -41,10 +41,10 @@ class CMakeExtension(Extension):
 
 class CMakeBuild(build_ext):
     def build_extension(self, ext: CMakeExtension) -> None:
-        package_dir = Path(__file__).resolve()
+        package_dir = Path(__file__).resolve().parent
 		
 		# Make sure git submodules are initialised
-        initialise_submodules(package_dir)
+        initialise_submodules(str(package_dir))
 
         # Must be in this form due to bug in .resolve() only fixed in Python 3.10+
         ext_fullpath = Path.cwd() / self.get_ext_fullpath(ext.name)
