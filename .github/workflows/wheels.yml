@@ -30,6 +30,13 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           echo "[build]`ncompiler=mingw32" | Out-File -Encoding ASCII ~/pydistutils.cfg
+
+      - name: Install BLAS (Ubuntu)
+        if: runner.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libblas-dev
+
       - uses: actions/checkout@v4
 
       # Used to host cibuildwheel
