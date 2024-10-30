@@ -23,13 +23,21 @@ def initialise_submodules(dir = "."):
 	subprocess.run(["git", "submodule", "update", "--init", "--recursive"], cwd=dir, check=True)
 
 class CustomDevelopCommand(develop):
+	def __init__(self, project_dir):
+		develop.__init__(self)
+		self.project_dir = project_dir
+
 	def run(self):
-		initialise_submodules()
+		initialise_submodules(self.project_dir)
 		develop.run(self)
 
 class CustomInstallCommand(install):
+	def __init__(self, project_dir):
+		install.__init__(self)
+		self.project_dir = project_dir
+
 	def run(self):
-		initialise_submodules()
+		initialise_submodules(self.project_dir)
 		install.run(self)
 
 # A CMakeExtension needs a sourcedir instead of a file list.
@@ -150,6 +158,8 @@ class CMakeBuild(build_ext):
 
 package_dir = Path(__file__).resolve().parent
 gsw_path = os.path.abspath(os.path.join(package_dir, 'extern', 'gsw'))
+
+initialise_submodules(str(package_dir))
 
 # The information here can also be placed in setup.cfg - better separation of
 # logic and declaration, and simpler if you include description/version in a file.
