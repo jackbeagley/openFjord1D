@@ -148,6 +148,8 @@ class CMakeBuild(build_ext):
             ["cmake", "--build", ".", *build_args], cwd=build_temp, check=True
         )
 
+package_dir = Path(__file__).resolve().parent
+gsw_path = os.path.abspath(os.path.join(package_dir, 'extern', 'gsw'))
 
 # The information here can also be placed in setup.cfg - better separation of
 # logic and declaration, and simpler if you include description/version in a file.
@@ -158,9 +160,11 @@ setup(
     author_email="jack.beagley@outlook.com",
 #    description="A test project using pybind11 and CMake",
 #    long_description="",
-    ext_modules=[CMakeExtension("openFjord1D")],
+#    ext_modules=[CMakeExtension("openFjord1D")],
+    cmake_source_dir="src",
+	cmake_args=[f"-DGSW_PATH={gsw_path}"],
     cmdclass={
-		"build_ext": CMakeBuild,
+#		"build_ext": CMakeBuild,
 		"develop": CustomDevelopCommand,
 		"install": CustomInstallCommand,
 		},
