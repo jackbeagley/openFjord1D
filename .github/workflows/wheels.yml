@@ -27,7 +27,7 @@ jobs:
         #   CIBW_SOME_OPTION: value
         env:
           CIBW_BEFORE_ALL_MACOS: brew install gfortran
-          CIBW_BEFORE_ALL_LINUX: apt-get update && apt-get install -y gfortran libopenblas-dev liblapack-dev
+          CIBW_BEFORE_ALL_LINUX: apt update && apt install -y gfortran libopenblas-dev liblapack-dev
           CIBW_BEFORE_ALL_WINDOWS: choco install -y mingw
           CIBW_BUILD: cp311-*
 
