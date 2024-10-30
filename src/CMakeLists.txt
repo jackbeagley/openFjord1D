@@ -6,6 +6,12 @@ project(basin_diffusion
   LANGUAGES C Fortran
 )
 
+if (NOT SKBUILD)
+	message(STATUS "Build not controlled by scikit-build")
+else()
+	message(STATUS "Build controlled by scikit-build")
+endif()
+
 # Safety net
 if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
 message(
@@ -75,8 +81,6 @@ include(CMakePrintHelpers)
 if(BUILD_CPYTHON_SHARED_LIB)
 	# Ensure scikit-build modules
 	if (NOT SKBUILD)
-		message(STATUS "Not controlled by scikit-build")
-
   		find_package(Python 3.8 REQUIRED)
   		# Kanged --> https://github.com/Kitware/torch_liberator/blob/master/CMakeLists.txt
 		# If skbuild is not the driver; include its utilities in CMAKE_MODULE_PATH
@@ -88,8 +92,6 @@ if(BUILD_CPYTHON_SHARED_LIB)
   		)
   		list(APPEND CMAKE_MODULE_PATH "${SKBLD_DIR}/resources/cmake")
   		message(STATUS "Looking in ${SKBLD_DIR}/resources/cmake for CMake modules")
-	else()
-		message(STATUS "Controlled by scikit-build")
 	endif()
 
 	# scikit-build style includes
