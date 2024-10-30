@@ -193,7 +193,7 @@ set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES Fortran_MODULE_DIRECTORY 
 add_subdirectory(${EXTERN_DIR}/gsw gsw)
 
 ## LAPACK
-find_package(LAPACK REQUIRED)
+find_package(LAPACK)
 
 if (LAPACK_FOUND)
 	include_directories(${LAPACK_INCLUDE_DIRS})
