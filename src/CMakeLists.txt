@@ -23,6 +23,9 @@ endif()
 # Set a flag for whether to build a cpython shared library
 option(BUILD_CPYTHON_SHARED_LIB "Build a shared library for use with CPython" ON)
 
+# Set the free-line-length to 512
+set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -ffree-line-length-512")
+
 set(Fortran_SOURCE_DIR ${CMAKE_SOURCE_DIR})
 
 # Set source files
@@ -65,7 +68,6 @@ add_custom_target(
 add_custom_command(
   OUTPUT ${CMAKE_PREPROCESSED_DIR}/${MAIN_SOURCE_PREPROCESSED}
   COMMAND ${CMAKE_Fortran_COMPILER}
-    ${CMAKE_Fortran_FLAGS}
     -E
     -cpp
     -P
@@ -199,6 +201,9 @@ if (LAPACK_FOUND)
 	include_directories(${LAPACK_INCLUDE_DIRS})
 else()
 	add_subdirectory(${EXTERN_DIR}/lapack lapack)
+
+	# Set LAPACK libraries to be compiled with legacy Fortran
+
 endif()
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${LAPACK_LIBRARIES} gsw_static)
