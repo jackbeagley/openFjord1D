@@ -1,3 +1,6 @@
 [submodule "extern/gsw"]
 	path = extern/gsw
 	url = https://github.com/TEOS-10/GSW-Fortran
+[submodule "extern/lapack"]
+	path = extern/lapack
+	url = git@github.com:Reference-LAPACK/lapack.git

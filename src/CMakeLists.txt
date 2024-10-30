@@ -82,6 +82,10 @@ if(BUILD_CPYTHON_SHARED_LIB)
 	# Ensure scikit-build modules
 	if (NOT SKBUILD)
   		find_package(Python 3.8 REQUIRED)
+	
+		# Set the Python executable for compatibility
+		set(PYTHON_EXECUTABLE ${Python_EXECUTABLE})
+
   		# Kanged --> https://github.com/Kitware/torch_liberator/blob/master/CMakeLists.txt
 		# If skbuild is not the driver; include its utilities in CMAKE_MODULE_PATH
 		execute_process(
@@ -186,11 +190,16 @@ set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES Fortran_MODULE_DIRECTORY 
 
 ## GSW
 # Add the directory for GSW
-add_subdirectory(${GSW_PATH} gsw)
+add_subdirectory(${EXTERN_DIR}/gsw gsw)
 
 ## LAPACK
 find_package(LAPACK REQUIRED)
-include_directories(${LAPACK_INCLUDE_DIRS})
+
+if (LAPACK_FOUND)
+	include_directories(${LAPACK_INCLUDE_DIRS})
+else()
+	add_subdirectory(${EXTERN_DIR}/lapack lapack)
+endif()
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${LAPACK_LIBRARIES} gsw_static)
 

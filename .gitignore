@@ -1,5 +1,5 @@
 build/*
-extern/*
+#extern/*
 
 # Output files
 *.nc
