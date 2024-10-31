@@ -12,7 +12,7 @@ jobs:
         #, macos-13, macos-latest]
 
     steps:
-      - name: Install mingw-w64 on Windows
+      - name: Install mingw  on Windows
         if: ${{ runner.os == 'Windows' }}
         uses: msys2/setup-msys2@v2
         with:
@@ -37,6 +37,7 @@ jobs:
           CIBW_BEFORE_ALL_MACOS: brew install gfortran
           #     CIBW_BEFORE_ALL_LINUX: apt update && apt install -y gfortran libopenblas-dev liblapack-dev
           CIBW_BUILD: cp311-*
+          CIBW_SKIP: "*-win32 *-manylinux_i686"
 
       - uses: actions/upload-artifact@v4
         with:
