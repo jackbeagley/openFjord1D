@@ -12,6 +12,14 @@ jobs:
         #, macos-13, macos-latest]
 
     steps:
+      - name: Install mingw-w64 on Windows
+        if: ${{ runner.os == 'Windows' }}
+        uses: msys2/setup-msys2@v2
+        with:
+          path-type: inherit
+          install: |
+            mingw-w64-x86_64-gcc-fortran
+
       - uses: actions/checkout@v4
 
       # Used to host cibuildwheel
@@ -28,7 +36,6 @@ jobs:
         env:
           CIBW_BEFORE_ALL_MACOS: brew install gfortran
           #     CIBW_BEFORE_ALL_LINUX: apt update && apt install -y gfortran libopenblas-dev liblapack-dev
-          CIBW_BEFORE_ALL_WINDOWS: choco install -y mingw
           CIBW_BUILD: cp311-*
 
       - uses: actions/upload-artifact@v4
