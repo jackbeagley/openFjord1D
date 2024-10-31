@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18...3.22)# Needed to avoid requiring embedded Python libs too
 
-project(basin_diffusion
+project(openFjord1D
   VERSION 1.0
   DESCRIPTION "Fjord Basin Diffusion tools"
   LANGUAGES C Fortran
@@ -194,7 +194,7 @@ set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES Fortran_MODULE_DIRECTORY 
 # Add the directory for GSW
 add_subdirectory(${EXTERN_DIR}/gsw gsw)
 
-## LAPACK
+## LAPACK/opt/homebrew/Caskroom/miniforge/base/envs/main/lib/python3.13/site-packages/
 find_package(LAPACK)
 
 if (LAPACK_FOUND)
@@ -208,3 +208,4 @@ endif()
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${LAPACK_LIBRARIES} gsw_static)
 
+install(TARGETS ${CMAKE_PROJECT_NAME} DESTINATION ${CMAKE_PROJECT_NAME})

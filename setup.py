@@ -38,13 +38,14 @@ initialise_submodules(str(package_dir))
 # logic and declaration, and simpler if you include description/version in a file.
 setup(
     name="openFjord1D",
+	packages=["openFjord1D"],
     version="1.0.0",
     author="Jack Beagley",
     author_email="jack.beagley@outlook.com",
 #    description="A test project using pybind11 and CMake",
 #    long_description="",
 #    ext_modules=[CMakeExtension("openFjord1D")],
-    cmake_source_dir="src",
+    cmake_source_dir="openFjord1D",
 	cmake_args=[f"-DEXTERN_DIR={extern_dir}"],
 #    cmdclass={
 #		"develop": CustomDevelopCommand,
