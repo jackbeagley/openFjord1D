@@ -4,16 +4,24 @@ on: [push, pull_request]
 
 jobs:
   build_wheels:
-    name: Build wheels on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    name: Build wheels on ${{ matrix.os.os }}
+    runs-on: '${{ matrix.os.os }}-latest'
     strategy:
       matrix:
-        os: [ubuntu-latest]
-        #, windows-latest]
-        #, macos-13, macos-latest]
+        os:
+          - { os: windows, shell: msys2 }
+          - { os: ubuntu,  shell: bash  }
+          #      - { os: macos,   shell: bash  }
+    defaults:
+      run:
+        shell: '${{ matrix.os.shell }} {0}'
+    env:
+      CC: gcc
+      CXX: g++
+      FC: gfortran
 
     steps:
-      - name: Install mingw  on Windows
+      - name: Install mingw on Windows
         if: ${{ runner.os == 'Windows' }}
         uses: msys2/setup-msys2@v2
         with:
@@ -37,14 +45,13 @@ jobs:
         #   CIBW_SOME_OPTION: value
         env:
           CIBW_ARCHS_WINDOWS: auto64
-          CIBW_ENVIRONMENT_WINDOWS: CC=gcc CXX=g++ FC=gfortran
           CIBW_BEFORE_ALL_MACOS: brew install gfortran
           #     CIBW_BEFORE_ALL_LINUX: apt update && apt install -y gfortran libopenblas-dev liblapack-dev
-          CIBW_BEFORE_ALL_WINDOWS: set CC=gcc && choco install -y ninja
+          #          CIBW_BEFORE_ALL_WINDOWS: choco install -y ninja
           CIBW_BUILD: cp311-*
           CIBW_SKIP: "*-win32 *-manylinux_i686"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
+          name: cibw-wheels-${{ matrix.os.os }}-${{ strategy.job-index }}
           path: ./wheelhouse/*.whl
