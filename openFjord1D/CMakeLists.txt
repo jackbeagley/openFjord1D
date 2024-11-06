@@ -28,6 +28,8 @@ set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -ffree-line-length-512")
 
 set(Fortran_SOURCE_DIR ${CMAKE_SOURCE_DIR})
 
+set(EXTERN_DIR ${CMAKE_SOURCE_DIR}/extern)
+
 # Set source files
 set(MAIN_SOURCE
   libbasindiffusion.f90
@@ -125,7 +127,6 @@ if(BUILD_CPYTHON_SHARED_LIB)
 		string(REPLACE "\\" "/" PYTHON_INCLUDE_DIRS ${PYTHON_INCLUDE_DIRS})
 		string(REPLACE "\\" "/" F2PY_INCLUDE_DIR ${F2PY_INCLUDE_DIR})
 		string(REPLACE "\\" "/" NumPy_INCLUDE_DIRS ${NumPy_INCLUDE_DIRS})
-		string(REPLACE "\\" "/" EXTERN_DIR ${EXTERN_DIR})
 	endif()
 
   	# Print out the discovered paths

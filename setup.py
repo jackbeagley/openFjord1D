@@ -30,7 +30,6 @@ class CustomDevelopCommand(develop):
 		develop.run(self)
 
 package_dir = Path(__file__).resolve().parent
-extern_dir = os.path.abspath(os.path.join(package_dir, 'extern'))
 
 initialise_submodules(str(package_dir))
 
@@ -44,10 +43,6 @@ setup(
     author_email="jack.beagley@outlook.com",
 	cmake_languages=['C', 'Fortran'],
     cmake_source_dir="openFjord1D",
-	cmake_args=[f"-DEXTERN_DIR={extern_dir}"],
-#    cmdclass={
-#		"develop": CustomDevelopCommand,
-#		},
     zip_safe=False,
     python_requires=">=3.11",
 	install_requires=[

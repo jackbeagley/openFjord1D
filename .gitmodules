@@ -1,6 +1,6 @@
 [submodule "extern/gsw"]
-	path = extern/gsw
+	path = openFjord1D/extern/gsw
 	url = https://github.com/TEOS-10/GSW-Fortran
 [submodule "extern/lapack"]
-	path = extern/lapack
+	path = openFjord1D/extern/lapack
 	url = https://github.com/Reference-LAPACK/lapack.git
