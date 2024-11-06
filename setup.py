@@ -34,12 +34,6 @@ extern_dir = os.path.abspath(os.path.join(package_dir, 'extern'))
 
 initialise_submodules(str(package_dir))
 
-cmake_args = [f"-DEXTERN_DIR={extern_dir}"]
-
-# if on windows
-if sys.platform == "win32":
-    cmake_args += "-G Ninja"
-
 # The information here can also be placed in setup.cfg - better separation of
 # logic and declaration, and simpler if you include description/version in a file.
 setup(
@@ -48,11 +42,9 @@ setup(
     version="1.0.0",
     author="Jack Beagley",
     author_email="jack.beagley@outlook.com",
-#    description="A test project using pybind11 and CMake",
-#    long_description="",
-#    ext_modules=[CMakeExtension("openFjord1D")],
+	cmake_languages=['C', 'Fortran'],
     cmake_source_dir="openFjord1D",
-	cmake_args=cmake_args,
+	cmake_args=[f"-DEXTERN_DIR={extern_dir}"],
 #    cmdclass={
 #		"develop": CustomDevelopCommand,
 #		},
