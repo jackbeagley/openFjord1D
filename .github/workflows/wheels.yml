@@ -12,24 +12,22 @@ jobs:
           - { os: windows, shell: msys2 }
           - { os: ubuntu,  shell: bash  }
           #      - { os: macos,   shell: bash  }
-    defaults:
-      run:
-        shell: '${{ matrix.os.shell }} {0}'
-    env:
-      CC: gcc
-      CXX: g++
-      FC: gfortran
+          #defaults:
+          #  run:
+          #    shell: '${{ matrix.os.shell }} {0}'
+          #env:
+          #  CC: gcc
+          #  CXX: g++
+          #  FC: gfortran
 
     steps:
-      - name: Install mingw on Windows
+      - name: Install intel-fortran on Windows
         if: ${{ runner.os == 'Windows' }}
-        uses: msys2/setup-msys2@v2
+        uses: fortran-lang/setup-fortran@v1
+        id: setup-fortran
         with:
-          path-type: inherit
-          install: |
-            mingw-w64-x86_64-cmake
-            mingw-w64-x86_64-ninja
-            mingw-w64-x86_64-gcc-fortran
+          compiler: intel
+          version: 2023.2
 
       - uses: actions/checkout@v4
 
@@ -47,7 +45,7 @@ jobs:
         #   CIBW_SOME_OPTION: value
         env:
           CIBW_ARCHS_WINDOWS: auto64
-          CIBW_ENV_WINDOWS: CMAKE_GENERATOR=MinGW Makefiles
+          #CIBW_ENV_WINDOWS: CMAKE_GENERATOR=MinGW Makefiles
           CIBW_BEFORE_ALL_MACOS: brew install gfortran
           #     CIBW_BEFORE_ALL_LINUX: apt update && apt install -y gfortran libopenblas-dev liblapack-dev
           #          CIBW_BEFORE_ALL_WINDOWS: choco install -y ninja
