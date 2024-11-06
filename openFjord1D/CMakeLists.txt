@@ -125,6 +125,7 @@ if(BUILD_CPYTHON_SHARED_LIB)
 		string(REPLACE "\\" "/" PYTHON_INCLUDE_DIRS ${PYTHON_INCLUDE_DIRS})
 		string(REPLACE "\\" "/" F2PY_INCLUDE_DIR ${F2PY_INCLUDE_DIR})
 		string(REPLACE "\\" "/" NumPy_INCLUDE_DIRS ${NumPy_INCLUDE_DIRS})
+		string(REPLACE "\\" "/" EXTERN_DIR ${EXTERN_DIR})
 	endif()
 
   	# Print out the discovered paths
