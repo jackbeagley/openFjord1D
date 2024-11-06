@@ -120,6 +120,13 @@ if(BUILD_CPYTHON_SHARED_LIB)
 		OUTPUT_STRIP_TRAILING_WHITESPACE
 	)
 
+	# If on Windows, make sure to use /
+	if (WIN32)
+		string(REPLACE "\\" "/" PYTHON_INCLUDE_DIRS ${PYTHON_INCLUDE_DIRS})
+		string(REPLACE "\\" "/" F2PY_INCLUDE_DIR ${F2PY_INCLUDE_DIR})
+		string(REPLACE "\\" "/" NumPy_INCLUDE_DIRS ${NumPy_INCLUDE_DIRS})
+	endif()
+
   	# Print out the discovered paths
 	cmake_print_variables(PYTHON_INCLUDE_DIRS)
   	cmake_print_variables(F2PY_INCLUDE_DIR)
