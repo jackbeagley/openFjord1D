@@ -201,7 +201,7 @@ set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES Fortran_MODULE_DIRECTORY 
 
 ## GSW
 # Add the directory for GSW
-add_subdirectory(${EXTERN_DIR}/gsw gsw)
+add_subdirectory(${EXTERN_DIR}/gsw)
 
 ## LAPACK/opt/homebrew/Caskroom/miniforge/base/envs/main/lib/python3.13/site-packages/
 find_package(LAPACK)
@@ -209,7 +209,7 @@ find_package(LAPACK)
 if (LAPACK_FOUND)
 	include_directories(${LAPACK_INCLUDE_DIRS})
 else()
-	add_subdirectory(${EXTERN_DIR}/lapack lapack)
+	add_subdirectory(${EXTERN_DIR}/lapack)
 
 	# Set LAPACK libraries to be compiled with legacy Fortran
 
