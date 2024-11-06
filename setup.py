@@ -34,6 +34,12 @@ extern_dir = os.path.abspath(os.path.join(package_dir, 'extern'))
 
 initialise_submodules(str(package_dir))
 
+cmake_args = [f"-DEXTERN_DIR={extern_dir}"]
+
+# if on windows
+if sys.platform == "win32":
+    cmake_args += "-G Ninja"
+
 # The information here can also be placed in setup.cfg - better separation of
 # logic and declaration, and simpler if you include description/version in a file.
 setup(
@@ -46,7 +52,7 @@ setup(
 #    long_description="",
 #    ext_modules=[CMakeExtension("openFjord1D")],
     cmake_source_dir="openFjord1D",
-	cmake_args=[f"-DEXTERN_DIR={extern_dir}"],
+	cmake_args=cmake_args,
 #    cmdclass={
 #		"develop": CustomDevelopCommand,
 #		},
