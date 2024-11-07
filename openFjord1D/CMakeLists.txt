@@ -210,9 +210,6 @@ if (LAPACK_FOUND)
 	include_directories(${LAPACK_INCLUDE_DIRS})
 else()
 	add_subdirectory(${EXTERN_DIR}/lapack)
-
-	# Set LAPACK libraries to be compiled with legacy Fortran
-
 endif()
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${LAPACK_LIBRARIES} gsw_static)
