@@ -19,6 +19,12 @@ jobs:
         with:
           compiler: gcc
           version: latest
+      - name: Configure compilers (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          echo "CC=${{ steps.setup-fortran.outputs.cc }}" >> $env:GITHUB_ENV
+          echo "CXX=${{ steps.setup-fortran.outputs.cxx }}" >> $env:GITHUB_ENV
+          echo "FC=${{ steps.setup-fortran.outputs.fc }}" >> $env:GITHUB_ENV
       - uses: pypa/cibuildwheel@v3.2.0
         with:
           package-dir: .
