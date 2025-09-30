@@ -31,17 +31,18 @@ jobs:
           compiler: ${{ matrix.fc }}
           version: ${{ matrix.fc_ver }}
 
-      #- uses: msys2/setup-msys2@v2
-      #  if: runner.os == 'Windows'
-      #  with:
-      #    update: true
-      #    install: >-
-      #      mingw-w64-x86_64-ninja
+      - name: Install ninja
+        uses: msys2/setup-msys2@v2
+        if: runner.os == 'Windows'
+        with:
+          update: true
+          install: >-
+            mingw-w64-x86_64-ninja
 
-      #- name: Put MSYS2_MinGW64 on PATH
-      #  if: runner.os == 'Windows'
-      #  run: |
-      #    echo  "CMAKE_GENERATOR=Ninja" > $env:GITHUB_ENV
+      - name: Specify ninja as generator
+        if: runner.os == 'Windows'
+        run: |
+          echo  "CMAKE_GENERATOR=Ninja" > $env:GITHUB_ENV
 
       - uses: pypa/cibuildwheel@v3.2.0
         with:
