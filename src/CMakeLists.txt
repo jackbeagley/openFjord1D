@@ -26,7 +26,7 @@ option(BUILD_CPYTHON_SHARED_LIB "Build a shared library for use with CPython" ON
 # Set the free-line-length to 512
 set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -ffree-line-length-512")
 
-set(Fortran_SOURCE_DIR ${CMAKE_SOURCE_DIR}/src)
+set(Fortran_SOURCE_DIR ${CMAKE_SOURCE_DIR}/fortran)
 
 set(EXTERN_DIR ${CMAKE_SOURCE_DIR}/extern)
 
@@ -84,39 +84,40 @@ include(CMakePrintHelpers)
 
 if(BUILD_CPYTHON_SHARED_LIB)
 	# Ensure scikit-build modules
-	if (NOT SKBUILD)
-  		find_package(Python 3.8 REQUIRED)
+	#	if (NOT SKBUILD)
+  		find_package(Python 3.8 REQUIRED COMPONENTS Interpreter Development.Module NumPy)
 	
 		# Set the Python executable for compatibility
-		set(PYTHON_EXECUTABLE ${Python_EXECUTABLE})
+		#set(PYTHON_EXECUTABLE ${Python_EXECUTABLE})
 
   		# Kanged --> https://github.com/Kitware/torch_liberator/blob/master/CMakeLists.txt
 		# If skbuild is not the driver; include its utilities in CMAKE_MODULE_PATH
-		execute_process(
-		    COMMAND "${PYTHON_EXECUTABLE}"
-		    -c "import os, skbuild; print(os.path.dirname(skbuild.__file__))"
-		    OUTPUT_VARIABLE SKBLD_DIR
-		    OUTPUT_STRIP_TRAILING_WHITESPACE
-  		)
-  		list(APPEND CMAKE_MODULE_PATH "${SKBLD_DIR}/resources/cmake")
-  		message(STATUS "Looking in ${SKBLD_DIR}/resources/cmake for CMake modules")
-	endif()
+		#execute_process(
+		#    COMMAND "${PYTHON_EXECUTABLE}"
+		#    -c "import os, skbuild; print(os.path.dirname(skbuild.__file__))"
+		#    OUTPUT_VARIABLE SKBLD_DIR
+		#    OUTPUT_STRIP_TRAILING_WHITESPACE
+  		#)
+  		#list(APPEND CMAKE_MODULE_PATH "${SKBLD_DIR}/resources/cmake")
+  		#message(STATUS "Looking in ${SKBLD_DIR}/resources/cmake for CMake modules")
+		#endif()
 
 	# scikit-build style includes
-	find_package(PythonExtensions REQUIRED) # for ${PYTHON_EXTENSION_MODULE_SUFFIX}
+	#find_package(PythonExtensions REQUIRED) # for ${PYTHON_EXTENSION_MODULE_SUFFIX}
+	#find_package(Python REQUIRED COMPONENTS Interpreter Development.Module NumPy)
 
 	# Grab the variables from a local Python installation
 	# NumPy headers
+	#	execute_process(
+	#	  COMMAND "${PYTHON_EXECUTABLE}"
+	#	  -c "import numpy; print(numpy.get_include())"
+	#	  OUTPUT_VARIABLE NumPy_INCLUDE_DIRS
+	#	  OUTPUT_STRIP_TRAILING_WHITESPACE
+	#	)
+	#	
+	#	# F2PY headers
 	execute_process(
-	  COMMAND "${PYTHON_EXECUTABLE}"
-	  -c "import numpy; print(numpy.get_include())"
-	  OUTPUT_VARIABLE NumPy_INCLUDE_DIRS
-	  OUTPUT_STRIP_TRAILING_WHITESPACE
-	)
-	
-	# F2PY headers
-	execute_process(
-		COMMAND "${PYTHON_EXECUTABLE}"
+		COMMAND "${Python_EXECUTABLE}"
 		-c "import numpy.f2py; print(numpy.f2py.get_include())"
 		OUTPUT_VARIABLE F2PY_INCLUDE_DIR
 		OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -124,15 +125,15 @@ if(BUILD_CPYTHON_SHARED_LIB)
 
 	# If on Windows, make sure to use /
 	if (WIN32)
-		string(REPLACE "\\" "/" PYTHON_INCLUDE_DIRS ${PYTHON_INCLUDE_DIRS})
+		string(REPLACE "\\" "/" Python_INCLUDE_DIRS ${Python_INCLUDE_DIRS})
 		string(REPLACE "\\" "/" F2PY_INCLUDE_DIR ${F2PY_INCLUDE_DIR})
-		string(REPLACE "\\" "/" NumPy_INCLUDE_DIRS ${NumPy_INCLUDE_DIRS})
+		string(REPLACE "\\" "/" Python_NumPy_INCLUDE_DIRS ${Python_NumPy_INCLUDE_DIRS})
 	endif()
 
   	# Print out the discovered paths
-	cmake_print_variables(PYTHON_INCLUDE_DIRS)
+	cmake_print_variables(Python_INCLUDE_DIRS)
   	cmake_print_variables(F2PY_INCLUDE_DIR)
-  	cmake_print_variables(NumPy_INCLUDE_DIRS)
+  	cmake_print_variables(Python_NumPy_INCLUDE_DIRS)
 
   	set(f2py_module_name "${CMAKE_PROJECT_NAME}")
   	set(fortran_src_file "${CMAKE_SOURCE_DIR}/libbasindiffusion.f90")
@@ -148,8 +149,8 @@ if(BUILD_CPYTHON_SHARED_LIB)
 	add_custom_command(
 		OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${f2py_module_c}" "${CMAKE_CURRENT_BINARY_DIR}/${f2py_fortran_wrapper}"
 		COMMAND ${Python_EXECUTABLE}  -m "numpy.f2py"
-			-m "${f2py_module_name}"
 			"${CMAKE_PREPROCESSED_DIR}/${MAIN_SOURCE_PREPROCESSED}"
+			-m "${f2py_module_name}"
 			--lower # Important
 			--quiet
 		#--verbose
@@ -157,7 +158,7 @@ if(BUILD_CPYTHON_SHARED_LIB)
 	)
 
 	# Set up target
-	add_library(${CMAKE_PROJECT_NAME} MODULE
+	Python_add_library(${CMAKE_PROJECT_NAME} MODULE WITH_SOABI
 		"${CMAKE_CURRENT_BINARY_DIR}/${f2py_module_c}" # Generated
 		"${F2PY_INCLUDE_DIR}/fortranobject.c" # From NumPy
 		"${CMAKE_PREPROCESSED_DIR}/${MAIN_SOURCE_PREPROCESSED}" # Fortran source(s)
@@ -165,27 +166,25 @@ if(BUILD_CPYTHON_SHARED_LIB)
 		${AUX_SOURCE_FULL} # Aux source
 	)
 
-	target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC
-		${F2PY_INCLUDE_DIR}
-		${NumPy_INCLUDE_DIRS}
-		${PYTHON_INCLUDE_DIRS})
-	set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES SUFFIX "${PYTHON_EXTENSION_MODULE_SUFFIX}")
-	set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES PREFIX "")
-	set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES DEBUG_POSTFIX "")
+	target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE Python::NumPy)
+	add_dependencies(${CMAKE_PROJECT_NAME} genpyf)
+	target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${F2PY_INCLUDE_DIR})
+	#set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES SUFFIX "${PYTHON_EXTENSION_MODULE_SUFFIX}")
+	#set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES PREFIX "")
+	#set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES DEBUG_POSTFIX "")
 
 	# Linker fixes
-	if (UNIX)
-	  if (APPLE)
-	    set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
-	    LINK_FLAGS  '-Wl,-dylib,-undefined,dynamic_lookup')
-	  else()
-	    set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
-	  LINK_FLAGS  '-Wl,--allow-shlib-undefined')
-	  endif()
-	endif()
+	#if (UNIX)
+	#  if (APPLE)
+	#    set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
+	#    LINK_FLAGS  '-Wl,-dylib,-undefined,dynamic_lookup')
+	#  else()
+	#    set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
+	#  LINK_FLAGS  '-Wl,--allow-shlib-undefined')
+	#  endif()
+	#endif()
 
 	# Depend on sources
-	add_dependencies(${CMAKE_PROJECT_NAME} genpyf)
 else()
   add_library(${CMAKE_PROJECT_NAME} SHARED
     ${Fortran_SOURCE_DIR}/${MAIN_SOURCE}
