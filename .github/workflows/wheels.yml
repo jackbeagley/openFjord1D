@@ -39,10 +39,11 @@ jobs:
           install: >-
             mingw-w64-x86_64-ninja
 
-      - name: Specify ninja as generator
+      - name: Specify ninja as generator and cl as C compiler
         if: runner.os == 'Windows'
         run: |
           echo  "CMAKE_GENERATOR=Ninja" > $env:GITHUB_ENV
+          echo "CC=cl" > $env:GITHUB_ENV
 
       - uses: pypa/cibuildwheel@v3.2.0
         with:
