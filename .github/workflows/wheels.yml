@@ -8,21 +8,15 @@ jobs:
     strategy:
       matrix:
         include:
-          #- os: ubuntu-latest
-          #  arch: x86_64
-          #  fc: intel
-          #  fc_ver: '2025.0'
-          #- os: ubuntu-latest
-          #  arch: arm64
-          #  fc: gcc
-          #  fc_ver: 'latest'
-          #- os: windows-latest
-          #  arch: x86_64
-          #  fc: intel
-          #  fc_ver: '2025.0'
-          - os: macos-15-intel
+          - os: ubuntu-latest
+            fc: intel
+            fc_ver: '2025.0'
+          - os: ubuntu-latest
             fc: gcc
-            fc_ver: '12'
+            fc_ver: 'latest'
+          - os: windows-latest
+            fc: intel
+            fc_ver: '2025.0'
           - os: macos-14
             fc: gcc
             fc_ver: '12'
@@ -46,13 +40,7 @@ jobs:
           install: >-
             mingw-w64-x86_64-ninja
 
-#      - name: Specify ninja as generator and cl as C compiler
-#        if: runner.os == 'Windows'
-#        run: |
-#          echo  "CMAKE_GENERATOR=Ninja" > $env:GITHUB_ENV
-#          echo "CC=cl" > $env:GITHUB_ENV
-#          echo "FC=ifx" > $env:GITHUB_ENV
-      - name: Set NMake on Windows
+      - name: Set Ninja, cl on Windows
         if: runner.os == 'Windows'
         run: |
           echo 'CMAKE_GENERATOR=Ninja' >> $env:GITHUB_ENV
@@ -68,10 +56,8 @@ jobs:
           path: ./wheelhouse/*.whl
 
     env:
-      #CIBW_ARCHS_MACOS: "arm64;x86_64"
       CIBW_ENVIRONMENT: "MACOSX_DEPLOYMENT_TARGET=14.0"
       CIBW_BUILD: "cp39-* cp310-* cp311-* cp312-*"
-      #CIBW_BEFORE_ALL_WINDOWS: "C:\\Program Files (x86)\\Intel\\oneAPI\\setvars.bat"
       CIBW_ARCHS: auto64
 
       
