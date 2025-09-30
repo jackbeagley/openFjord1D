@@ -14,22 +14,34 @@ jobs:
       - uses: actions/checkout@v5      
         with:
           submodules: recursive
+
       - uses: fortran-lang/setup-fortran@v1
         id: setup-fortran
         with:
           compiler: gcc
-          version: latest
+          version: latest    
+
+      - uses: msys2/setup-msys2@v2
+        if: runner.os == 'Windows'
+        with:
+          update: true
+          install: >-
+            mingw-w64-x86_64-ninja
+
+      - name: Put MSYS2_MinGW64 on PATH
+        if: runner.os == 'Windows'
+        run: |
+          echo  "CMAKE_GENERATOR=Ninja" > $env:GITHUB_ENV
+
       - uses: pypa/cibuildwheel@v3.2.0
-        env:
-          CC: ${{ steps.setup-fortran.outputs.cc }}
-          CXX: ${{ steps.setup-fortran.outputs.cxx }}
-          FC: ${{ steps.setup-fortran.outputs.fc }}
         with:
           package-dir: .
+
       - uses: actions/upload-artifact@v4
         with:
           name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
           path: ./wheelhouse/*.whl
+
     env:
       CIBW_ARCHS_MACOS: "universal2"
       CIBW_BUILD: "cp39-* cp310-* cp311-* cp312-*"
