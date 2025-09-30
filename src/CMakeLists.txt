@@ -6,6 +6,8 @@ project(openFjord1D
   LANGUAGES C Fortran
 )
 
+set(CMAKE_C_STANDARD 99)
+
 if (NOT SKBUILD)
 	message(STATUS "Build not controlled by scikit-build")
 else()
