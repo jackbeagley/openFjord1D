@@ -64,3 +64,4 @@ jobs:
       #CIBW_ARCHS_MACOS: "universal2"
       CIBW_BUILD: "cp39-* cp310-* cp311-* cp312-*"
       CIBW_BEFORE_ALL_WINDOWS: "C:\\Program Files (x86)\\Intel\\oneAPI\\setvars.bat"
+      CIBW_ARCHS: auto64
