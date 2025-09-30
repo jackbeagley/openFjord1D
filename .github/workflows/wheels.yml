@@ -22,7 +22,7 @@ jobs:
           #  fc_ver: '2025.0'
           - os: macos-latest
             fc: gcc
-            fc_ver: 'latest'
+            fc_ver: '12'
 
     steps:
       - uses: actions/checkout@v5      
