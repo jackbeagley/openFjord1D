@@ -16,10 +16,14 @@ jobs:
           #  arch: arm64
           #  fc: gcc
           #  fc_ver: 'latest'
-          - os: windows-latest
-            arch: x86_64
-            fc: intel
-            fc_ver: '2025.0'
+          #- os: windows-latest
+          #  arch: x86_64
+          #  fc: intel
+          #  fc_ver: '2025.0'
+          - os: macos-latest
+            fc: gcc
+            fc_ver: 'latest'
+
     steps:
       - uses: actions/checkout@v5      
         with:
@@ -61,7 +65,32 @@ jobs:
           path: ./wheelhouse/*.whl
 
     env:
-      #CIBW_ARCHS_MACOS: "universal2"
+      CIBW_ARCHS_MACOS: "universal2"
       CIBW_BUILD: "cp39-* cp310-* cp311-* cp312-*"
       #CIBW_BEFORE_ALL_WINDOWS: "C:\\Program Files (x86)\\Intel\\oneAPI\\setvars.bat"
       CIBW_ARCHS: auto64
+
+      
+  publish-to-testpypi:
+    name: Publish Python 🐍 distribution 📦 to TestPyPI
+    needs:
+    - build_wheels
+    runs-on: ubuntu-latest
+
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/openFjord1D
+
+    permissions:
+      id-token: write  # IMPORTANT: mandatory for trusted publishing
+
+    steps:
+    - name: Download all the dists
+      uses: actions/download-artifact@v4
+      with:
+        name: python-package-distributions
+        path: dist/
+    - name: Publish distribution 📦 to TestPyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
