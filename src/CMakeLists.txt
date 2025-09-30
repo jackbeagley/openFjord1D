@@ -91,6 +91,9 @@ else()
 	    > ${CMAKE_PREPROCESSED_DIR}/${MAIN_SOURCE_PREPROCESSED}
 	  DEPENDS "${Fortran_SOURCE_DIR}/${MAIN_SOURCE}"
 	)
+
+	set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /names:lowercase /assume:underscore")
+
 endif()
 
 message(STATUS ${PREPROCESS_CMD})
