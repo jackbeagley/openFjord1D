@@ -7,9 +7,19 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        #, macos-latest]
-
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+            fc: intel
+            fc_ver: '2025.0'
+          - os: ubuntu-latest
+            arch: arm64
+            fc: gcc
+            fc_ver: 'latest'
+          - os: windows-latest
+            arch: x86_64
+            fc: intel
+            fc_ver: '2025.0'
     steps:
       - uses: actions/checkout@v5      
         with:
@@ -18,20 +28,20 @@ jobs:
       - uses: fortran-lang/setup-fortran@v1
         id: setup-fortran
         with:
-          compiler: gcc
-          version: latest    
+          compiler: ${{ matrix.fc }}
+          version: ${{ matrix.fc_ver }}
 
-      - uses: msys2/setup-msys2@v2
-        if: runner.os == 'Windows'
-        with:
-          update: true
-          install: >-
-            mingw-w64-x86_64-ninja
+      #- uses: msys2/setup-msys2@v2
+      #  if: runner.os == 'Windows'
+      #  with:
+      #    update: true
+      #    install: >-
+      #      mingw-w64-x86_64-ninja
 
-      - name: Put MSYS2_MinGW64 on PATH
-        if: runner.os == 'Windows'
-        run: |
-          echo  "CMAKE_GENERATOR=Ninja" > $env:GITHUB_ENV
+      #- name: Put MSYS2_MinGW64 on PATH
+      #  if: runner.os == 'Windows'
+      #  run: |
+      #    echo  "CMAKE_GENERATOR=Ninja" > $env:GITHUB_ENV
 
       - uses: pypa/cibuildwheel@v3.2.0
         with:
