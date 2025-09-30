@@ -47,7 +47,7 @@ jobs:
 #          echo "FC=ifx" > $env:GITHUB_ENV
       - name: Set NMake on Windows
         if: runner.os == 'Windows'
-        run: echo "CMAKE_GENERATOR=\"NMake Makefiles\"" > $env:GITHUB_ENV
+        run: echo 'CMAKE_GENERATOR=NMake Makefiles' >> $env:GITHUB_ENV
 
       - uses: pypa/cibuildwheel@v3.2.0
         with:
