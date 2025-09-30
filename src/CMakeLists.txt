@@ -67,16 +67,29 @@ add_custom_target(
 #endforeach()
 
 # Add a custom command to run the preprocessor
-add_custom_command(
-  OUTPUT ${CMAKE_PREPROCESSED_DIR}/${MAIN_SOURCE_PREPROCESSED}
-  COMMAND ${CMAKE_Fortran_COMPILER}
-    -E
-    -cpp
-    -P
-    ${Fortran_SOURCE_DIR}/${MAIN_SOURCE}
-    > ${CMAKE_PREPROCESSED_DIR}/${MAIN_SOURCE_PREPROCESSED}
-  DEPENDS "${Fortran_SOURCE_DIR}/${MAIN_SOURCE}"
-)
+if ("${CMAKE_Fortran_COMPILER}" MATCHES "gfortran")
+	add_custom_command(
+	  OUTPUT ${CMAKE_PREPROCESSED_DIR}/${MAIN_SOURCE_PREPROCESSED}
+	  COMMAND ${CMAKE_Fortran_COMPILER}
+	    -E
+	    -cpp
+	    -P
+	    ${Fortran_SOURCE_DIR}/${MAIN_SOURCE}
+	    > ${CMAKE_PREPROCESSED_DIR}/${MAIN_SOURCE_PREPROCESSED}
+	  DEPENDS "${Fortran_SOURCE_DIR}/${MAIN_SOURCE}"
+	)
+else()
+	add_custom_command(
+	  OUTPUT ${CMAKE_PREPROCESSED_DIR}/${MAIN_SOURCE_PREPROCESSED}
+	  COMMAND ${CMAKE_Fortran_COMPILER}
+	    -E
+	    -fpp
+	    -P
+	    ${Fortran_SOURCE_DIR}/${MAIN_SOURCE}
+	    > ${CMAKE_PREPROCESSED_DIR}/${MAIN_SOURCE_PREPROCESSED}
+	  DEPENDS "${Fortran_SOURCE_DIR}/${MAIN_SOURCE}"
+	)
+endif()
 
 message(STATUS ${PREPROCESS_CMD})
 
