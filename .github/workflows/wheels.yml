@@ -69,7 +69,7 @@ jobs:
 
     env:
       #CIBW_ARCHS_MACOS: "arm64;x86_64"
-      CIBW_MACOS_VERSION: "10.14"
+      CIBW_ENVIRONMENT: "MACOSX_DEPLOYMENT_TARGET=14.0"
       CIBW_BUILD: "cp39-* cp310-* cp311-* cp312-*"
       #CIBW_BEFORE_ALL_WINDOWS: "C:\\Program Files (x86)\\Intel\\oneAPI\\setvars.bat"
       CIBW_ARCHS: auto64
