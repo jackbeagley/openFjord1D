@@ -20,7 +20,10 @@ jobs:
           #  arch: x86_64
           #  fc: intel
           #  fc_ver: '2025.0'
-          - os: macos-latest
+          - os: macos-15-intel
+            fc: gcc
+            fc_ver: '12'
+          - os: macos-14
             fc: gcc
             fc_ver: '12'
 
@@ -65,8 +68,8 @@ jobs:
           path: ./wheelhouse/*.whl
 
     env:
-      CIBW_ARCHS_MACOS: "arm64"
-      CIBW_MACOS_VERSION: 14
+      CIBW_ARCHS_MACOS: "arm64;x86_64"
+      CIBW_MACOS_VERSION: "10.14"
       CIBW_BUILD: "cp39-* cp310-* cp311-* cp312-*"
       #CIBW_BEFORE_ALL_WINDOWS: "C:\\Program Files (x86)\\Intel\\oneAPI\\setvars.bat"
       CIBW_ARCHS: auto64
