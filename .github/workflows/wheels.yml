@@ -18,8 +18,8 @@ jobs:
           #  fc_ver: 'latest'
           - os: windows-latest
             arch: x86_64
-            fc: intel-classic
-            fc_ver: '2021.10'
+            fc: intel
+            fc_ver: '2025.0'
     steps:
       - uses: actions/checkout@v5      
         with:
