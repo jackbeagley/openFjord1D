@@ -11,9 +11,9 @@ jobs:
           - os: ubuntu-latest
             fc: intel
             fc_ver: '2025.0'
-          - os: ubuntu-latest
-            fc: gcc
-            fc_ver: 'latest'
+         # - os: ubuntu-latest
+         #   fc: gcc
+         #   fc_ver: 'latest'
           - os: windows-latest
             fc: intel
             fc_ver: '2025.0'
@@ -79,7 +79,6 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         path: ./dist
-        merge-multiple: true
     - name: Publish distribution 📦 to TestPyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
