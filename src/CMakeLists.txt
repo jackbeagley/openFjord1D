@@ -97,6 +97,21 @@ message(STATUS ${PREPROCESS_CMD})
 
 include(CMakePrintHelpers)
 
+## GSW
+# Add the directory for GSW
+add_subdirectory(${EXTERN_DIR}/gsw)
+
+## LAPACK
+find_package(LAPACK)
+
+if (LAPACK_FOUND)
+	include_directories(${LAPACK_INCLUDE_DIRS})
+else()
+	add_subdirectory(${EXTERN_DIR}/lapack)
+	set(BLAS_LIBRARIES blas)
+	set(LAPACK_LIBRARIES lapack)
+endif()
+
 if(BUILD_CPYTHON_SHARED_LIB)
 	# Ensure scikit-build modules
 	#	if (NOT SKBUILD)
@@ -180,8 +195,8 @@ if(BUILD_CPYTHON_SHARED_LIB)
 		"${CMAKE_CURRENT_BINARY_DIR}/${f2py_fortran_wrapper}" # Fortran wrapper
 		${AUX_SOURCE_FULL} # Aux source
 	)
-
-	target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE Python::NumPy)
+	message(STATUS "${LAPACK_LIBRARIES}")
+	target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE Python::NumPy ${LAPACK_LIBRARIES} gsw_static)
 	add_dependencies(${CMAKE_PROJECT_NAME} genpyf)
 	target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${F2PY_INCLUDE_DIR})
 	#set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES SUFFIX "${PYTHON_EXTENSION_MODULE_SUFFIX}")
@@ -205,6 +220,8 @@ else()
     ${Fortran_SOURCE_DIR}/${MAIN_SOURCE}
     ${Fortran_SOURCE_DIR}/${AUX_SOURCE}
   )
+
+  target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${LAPACK_LIBRARIES} gsw_static)
 endif()
 
 set(MODULE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/mod)
@@ -212,20 +229,5 @@ set(CMAKE_Fortran_MODULE_DIRECTORY ${MODULE_OUTPUT_DIRECTORY})
 set_directory_properties(PROPERTIES Fortran_MODULE_DIRECTORY ${MODULE_OUTPUT_DIRECTORY})
 
 set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES Fortran_MODULE_DIRECTORY ${MODULE_OUTPUT_DIRECTORY})
-
-## GSW
-# Add the directory for GSW
-add_subdirectory(${EXTERN_DIR}/gsw)
-
-## LAPACK/opt/homebrew/Caskroom/miniforge/base/envs/main/lib/python3.13/site-packages/
-find_package(LAPACK)
-
-if (LAPACK_FOUND)
-	include_directories(${LAPACK_INCLUDE_DIRS})
-else()
-	add_subdirectory(${EXTERN_DIR}/lapack)
-endif()
-
-target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${LAPACK_LIBRARIES} gsw_static)
 
 install(TARGETS ${CMAKE_PROJECT_NAME} DESTINATION ${CMAKE_PROJECT_NAME})
