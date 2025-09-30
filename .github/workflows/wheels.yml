@@ -12,10 +12,10 @@ jobs:
             arch: x86_64
             fc: intel
             fc_ver: '2025.0'
-          - os: ubuntu-latest
-            arch: arm64
-            fc: gcc
-            fc_ver: 'latest'
+          #- os: ubuntu-latest
+          #  arch: arm64
+          #  fc: gcc
+          #  fc_ver: 'latest'
           - os: windows-latest
             arch: x86_64
             fc: intel
@@ -44,6 +44,7 @@ jobs:
         run: |
           echo  "CMAKE_GENERATOR=Ninja" > $env:GITHUB_ENV
           echo "CC=cl" > $env:GITHUB_ENV
+          echo "FC=ifx" > $env:GITHUB_ENV
 
       - uses: pypa/cibuildwheel@v3.2.0
         with:
