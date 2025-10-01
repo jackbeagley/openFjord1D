@@ -8,9 +8,9 @@ jobs:
     strategy:
       matrix:
         include:
-         # - os: ubuntu-latest
-         #   fc: intel
-         #   fc_ver: '2025.0'
+          - os: ubuntu-latest
+            fc: intel
+            fc_ver: '2025.0'
          # - os: ubuntu-latest
          #   fc: gcc
          #   fc_ver: 'latest'
