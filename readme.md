@@ -8,7 +8,13 @@ If water at sill depth is denser than water inside of the basin, lighter water i
 ## Building
 Use the following commands to build.
 A Fortran compiler is required, as well as python
+
+Make sure to initialise and clone the submodules first (GSW and LAPACK)
+
+
 ```
+git submodule update --init
+
 cmake -S src -B build
 cmake --build build
 ```
